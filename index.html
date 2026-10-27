@@ -358,7 +358,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 function setFrame(level,msg){
-  if(frame.className!==level) frame.className=level;
+  if(frame.className!==level){ frame.className=level; coach.style.borderColor={green:'var(--g)',yellow:'var(--a)',red:'var(--r)',idle:'#bbb'}[level]; }
   var onBack=(S.flow==='passes'&&S.phase==='backs')||(S.flow==='pairs'&&S.step==='back');
   if(level==='idle'&&msg==='Swap in the next card') msg=onBack?'Swap in the next back':'Swap in the next card';
   if(coach.textContent!==msg) coach.textContent=msg;
