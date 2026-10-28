@@ -1,4 +1,4 @@
-/* Collectors Desk v0.9 - on-device card reader.
+/* Collectors Desk v0.10 - on-device card reader.
    tesseract.js + wasm + English data are bundled in ./ocr/ (same origin, works offline, no CDN).
    Photos never leave the device. This file: loading, image preparation, running the passes.
    Matching/parsing lives in ocr-parse.js so it can be tested without a browser. */
@@ -14,8 +14,8 @@ function init(onStatus){
   ST.loading=(async function(){
     try{
       if(onStatus) onStatus('Getting the reader ready (about 7 MB, once)…');
-      await loadScript(BASE+'tesseract.min.js?v=0.9');
-      var w=await Tesseract.createWorker('eng',1,{workerPath:BASE+'worker.min.js?v=0.9',corePath:BASE,langPath:BASE,gzip:true,logger:function(){}});
+      await loadScript(BASE+'tesseract.min.js?v=0.10');
+      var w=await Tesseract.createWorker('eng',1,{workerPath:BASE+'worker.min.js?v=0.10',corePath:BASE,langPath:BASE,gzip:true,logger:function(){}});
       ST.w=w; ST.ready=true; return w;
     }catch(e){ ST.failed=e; ST.loading=null; throw e; }
   })();
@@ -60,5 +60,13 @@ async function readWords(blob,opts){
   cv=null; return {words:words,ms:Date.now()-t0};
 }
 async function stop(){ if(ST.w){ try{ await ST.w.terminate(); }catch(e){} ST.w=null; ST.loading=null; ST.ready=false; } }
-window.CardOCR={init:init,readWords:readWords,PASSES:PASSES,stop:stop,state:ST};
+/* v0.10: one-off read of a ready-made canvas (used by the serial reader, the brand reader and the draw-a-box tool). Calls are queued so they never overlap. */
+var Q=Promise.resolve();
+function recognize(cv,o){
+  o=o||{}; var job=Q.then(async function(){
+    var w=await init(); await w.setParameters({tessedit_pageseg_mode:String(o.psm||7),tessedit_char_whitelist:o.wl||'',user_defined_dpi:'300'});
+    return Promise.race([w.recognize(cv),sleep(30000).then(function(){throw new Error('took too long')})]);
+  }); Q=job.catch(function(){}); return job;
+}
+window.CardOCR={init:init,readWords:readWords,recognize:recognize,loadImg:loadImg,PASSES:PASSES,stop:stop,state:ST};
 })();

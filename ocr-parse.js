@@ -1,4 +1,4 @@
-/* Collectors Desk v0.9 - turns reader words into card fields.
+/* Collectors Desk v0.10 - turns reader words into card fields.
    Rule of thumb: a wrong guess is worse than a blank. Only well-read, dictionary-checked text fills a field ("ok", still marked "check this").
    Weaker reads are returned as "low" suggestions that the screen shows as tappable chips and never fills in by itself. */
 (function(root){

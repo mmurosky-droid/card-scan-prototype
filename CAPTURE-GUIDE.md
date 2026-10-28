@@ -17,6 +17,19 @@
 - **Soft light from one side** (a window or a lamp off to the side) works best.
 - **Plain, light mat** (or a sheet of paper) under the cards.
 
+### Getting the serial number and set name (new in v0.10)
+
+The little stamp like **07/10** and the set name (Bowman Chrome, Topps Diamond Icons…) are the hardest things for the phone to read. A good photo makes a big difference.
+
+- **Tilt to beat foil glare.** Serial stamps are often foil. Tip the card until the stamp is dark and sharp, not a white flash.
+- **Get all four corners in the frame**, and the whole bottom edge. The stamp is usually along the bottom or in a corner.
+- **Come in a little closer** for numbered cards. A photo where the card fills the frame reads far better than one with lots of mat.
+- **Name running up the side?** Keep the side edge in frame. The app reads sideways names too.
+- **Snap the back too.** The back names the set and the year in the small print. On the Name screen, tap **Add the back photo** (optional) to give the reader a second look.
+- **If the app can't read it,** it never guesses. It shows a zoom of the spot, big buttons for the most likely answers, and a big number pad (**Type it**). One tap if the answer is on a button, a few digits if not. Tap **Not numbered** if there is no stamp.
+- **Draw a box** around any name, serial or set on the photo and the app reads just that spot, bigger.
+- **Search the web for this card** (Name screen) opens Google or a checklist in a new tab. The app sends nothing. Come back and tap what you found. Cards you confirm are remembered on this phone and suggested next time.
+
 ## Scan the fronts
 
 1. On Home, tap the big gold **Scan cards**.
@@ -159,6 +172,11 @@ You're doing great. Every card you scan is one less to wonder about.
 - v0.8: Clean up photo (per card and batch, with Original toggle, Undo all), Listing sheet (editable draft, "check this" badges, copy text, listing CSV), sport field, undo for deleted cards, capture tips on the scan screens, near-black and gold palette with walnut surface variables (`:root` in index.html).
 
 - v0.9: Home tab is the landing screen (featured-cards carousel with arrows and swipe, collection at a glance, recent activity, one gold **Scan cards** button, one Next step card). **Protect my binder** status (green/yellow/red, last backed up, cards not yet backed up), a plain-words storage-permission line, backup nudges (after a scan, and when overdue), one-tap **Save backup** (share sheet with a file, or download; marked saved only when it completes), **Restore from backup** with preview, merge-without-overwrite and Undo. New **What next?** screen: a big responsive gallery with the choices in a side panel (iPad landscape) or a bottom bar (portrait/phone), and tap-to-enlarge. **Name your cards** now reads each photo on the device (bundled tesseract.js in `ocr/`, works offline, Web Worker, progress bar) and pre-fills player, team, year, set, card number, serial and auto/rookie flags only when it is sure, each marked "check this" until you confirm or edit. It never guesses parallels, condition, flaws or price. Black, gold and walnut colours as `:root` variables. App name Collectors Desk, (c) Mr. Moose Enterprises, LLC. Measured accuracy: `research/ocr-accuracy-v09.md`. Backup of v0.8: `*.bak-v0.8`.
+- v0.10: serial and set reading. A dedicated serial reader (finds numbered stamps in corners, edges and foil, enlarges them, reads digits several ways and only fills when the reads agree), a set/brand reader (text on the front, sideways edge names, bottom band, optional back photo; matched to a bundled list of public set facts with a guard against near-miss spellings), and a fast fallback on the Name screen: zoomed crops beside the field, one-tap answer buttons, a big number pad with a one-tap Not numbered, set chips, a draw-a-box reader, an optional Add the back photo prompt, Search the web link-outs (plain links, nothing sent) and a local catalog of cards you confirmed. Everything on the device. Every guess says check this. The camera screen is unchanged. Backups: `*.bak-v0.9`.
+
+## One-line test script (v0.10)
+
+> Open the page, tap Scan cards > Start camera > Start sweep, sweep a few numbered cards, tap Stop, tap Name your cards; on a card with a stamp tap Type it, tap /10 then 0 and 7 and Use 07/10; tap Draw a box on the photo, drag over the name, tap the suggestion and Use this; tap Add the back photo on one card; tap Not numbered on another; tap a Set chip; tap one "check this" badge; then tap Open my Binder.
 
 ## One-line test script (v0.9)
 

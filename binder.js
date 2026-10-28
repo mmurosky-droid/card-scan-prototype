@@ -1,4 +1,4 @@
-/* Collectors Desk v0.9 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.10 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -670,7 +670,7 @@ B.openName=function(opts){
   list.sort(function(a,b){return (a.snum-b.snum)||(a.idx-b.idx)||cmpDate(a,b)});
   if(!list.length){ MC().toast('Every card already has a name.'); B.goHome(); return; }
   if(N.rd) N.rd.stop=true;
-  N={ids:list.map(function(c){return c.id}),i:0,side:'front',named:0,sid:opts.sid||null,rd:null};
+  N={ids:list.map(function(c){return c.id}),i:0,side:'front',named:0,sid:opts.sid||null,rd:null,help:{}};
   MC().show('nm'); renderNM(true); startReading();
 };
 /* reader queue: one card at a time in the page, the heavy work runs in the reader's own worker, so taps stay smooth */
@@ -678,18 +678,24 @@ function startReading(){
   var rd=N.rd={stop:false,done:0,fail:null,cur:null,pending:0};
   var todo=N.ids.filter(function(id){ var c=byId(id); return c&&!c.ocrTs&&!c.edited; });
   rd.total=todo.length; rd.pending=todo.length;
-  if(!todo.length){ updateRd(); return; }
+  if(!todo.length&&!(v10ok()&&N.ids.some(function(id){ var c=byId(id); return c&&!c.ocr10; }))){ updateRd(); return; }
   updateRd(); if(!window.CardOCR||!window.CardParse){ rd.fail='The reader files are missing'; updateRd(); return; }
   (async function loop(){
     try{ await CardOCR.init(function(m){ rd.msg=m; updateRd(); }); }catch(e){ rd.fail=(e&&e.message)||'The reader did not start'; log('reader init failed: '+rd.fail); updateRd(); return; }
     rd.msg='';
     while(!rd.stop){
-      var id=null, k; for(k=0;k<N.ids.length;k++){ var j=(N.i+k)%N.ids.length, cc=byId(N.ids[j]); if(cc&&!cc.ocrTs&&!cc.ocrFail&&!cc.edited&&todo.indexOf(cc.id)>=0&&!rd['x'+cc.id]){ id=cc.id; break; } }
-      if(!id) break;
-      var c=byId(id); rd.cur=id; updateRd();
+      var id=null, k, job=null, cur0=byId(N.ids[N.i]);
+      function needCloser(cc,isCur){ return v10ok()&&cc&&!cc.ocr10&&!rd['z'+cc.id]&&(cc.ocrTs||cc.ocrFail||rd['x'+cc.id]||(isCur&&cc.edited))&&(isCur||!cc.edited); }
+      if(needCloser(cur0,true)) job=['c',cur0.id];
+      else { for(k=0;k<N.ids.length;k++){ var j=(N.i+k)%N.ids.length, cc=byId(N.ids[j]); if(cc&&!cc.ocrTs&&!cc.ocrFail&&!cc.edited&&todo.indexOf(cc.id)>=0&&!rd['x'+cc.id]){ job=['r',cc.id]; break; } }
+        if(!job) for(k=N.i;k<N.ids.length;k++){ var c3=byId(N.ids[k]); if(needCloser(c3,false)){ job=['c',c3.id]; break; } } }
+      if(!job) break;
+      var c=byId(job[1]); id=c.id; rd.cur=id; updateRd();
+      if(job[0]==='c'){ var done=true; try{ done=await readCloser(c,rd.words&&rd.words[id]); }catch(e){ log('closer error '+id+': '+(e&&e.message||e)); } if(done!==false) rd['z'+id]=1; rd.cur=null; updateRd(); await sleep(30); continue; }
       try{
         var r=await CardOCR.readWords(c.front||c.back,{shouldStop:function(){return rd.stop}});
         if(rd.stop) break;
+        (rd.words=rd.words||{})[id]=r.words;
         var p=CardParse.parse(r.words,c.sport||'Baseball'); applyRead(c,p,r.ms);
       }catch(e){ log('read fail '+id+': '+(e&&e.message||e)); c.ocrFail=true; rd['x'+id]=1; }
       rd['x'+id]=1; rd.done++; rd.pending=Math.max(0,rd.pending-1); rd.cur=null; updateRd();
@@ -741,7 +747,7 @@ function renderNM(first){
   updateRd();
   if(!first) $('nmBody').scrollTop=0;
 }
-function renderNMForm(c,first){ var y=$('nmBody').scrollTop, ae=document.activeElement, ak=ae&&ae.dataset&&ae.dataset.k&&$('nmForm').contains(ae)?ae.dataset.k:null, av=ak?ae.value:null; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond'],function(){}); if(ak&&!first){ var ni=$('nmForm').querySelector('[data-k="'+ak+'"]'); if(ni){ ni.value=av; } } if(!first) $('nmBody').scrollTop=y; }
+function renderNMForm(c,first){ var y=$('nmBody').scrollTop, ae=document.activeElement, ak=ae&&ae.dataset&&ae.dataset.k&&$('nmForm').contains(ae)?ae.dataset.k:null, av=ak?ae.value:null; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond'],function(){}); if(ak&&!first){ var ni=$('nmForm').querySelector('[data-k="'+ak+'"]'); if(ni){ ni.value=av; } } try{ renderNMHelp(c); }catch(e){ log('help render: '+e.message); } if(!first) $('nmBody').scrollTop=y; }
 function drawNMPhoto(c){
   var blob=N.side==='front'?(c.front||c.back):(c.back||c.front);
   $('nmImg').src=urlOf(blob); $('nmFl').textContent=(N.side==='front'?'Front':'Back')+((c.back&&c.front)?' · tap to flip':'');
@@ -750,7 +756,7 @@ $('nmImg').addEventListener('click',function(){ var c=byId(N.ids[N.i]); if(!c||!
 $('nmTeamLast').addEventListener('click',function(e){ if(!e.target.closest('[data-lt]')) return; var c=byId(N.ids[N.i]); setField(c,'team',LAST.team); var i=$('nmForm').querySelector('[data-k="team"]'); if(i) i.value=LAST.team; $('nmTeamLast').innerHTML=''; });
 function nmStep(d,saved){
   var c=byId(N.ids[N.i]);
-  if(c&&saved){ if(c.player) N.named++; c.edited=true; c.upd=Date.now(); saveCard(c); }
+  if(c&&saved){ if(c.player) N.named++; try{ if(window.CardGuess) CardGuess.remember(c); }catch(e){} c.edited=true; c.upd=Date.now(); saveCard(c); }
   flush(); var j=N.i+d; if(j<0) return; if(j>=N.ids.length){ finishNM(); return; } N.i=j; renderNM();
 }
 $('nmNext').addEventListener('click',function(){ nmStep(1,true); });
@@ -767,6 +773,187 @@ function finishNM(){
   B.openBinder('all');
   if(left) setTimeout(function(){ MC().toast(left+' card'+(left===1?'':'s')+' still need a name. You can do it any time.',3200); },3200);
 }
+/* ---------- v0.10: "read closer" + the help blocks on the Name screen ----------
+   After the first read, the reader looks closer at the card (serial stamp, sideways names, set logos, enlarged bottom edge).
+   What it is sure of is filled in and marked "check this". Everything else becomes big tap targets next to the field. Nothing leaves this device. */
+function HP(){ if(!N.help) N.help={}; return N.help; }
+function v10ok(){ return !!(window.CardRead&&window.CardGuess&&window.CardSerial&&window.CardText&&window.CardOCR); }
+async function readCloser(c,words){
+  var rd=N.rd, id=c.id, st=HP()[id]={busy:true,step:'Starting…',t0:Date.now()}; var cur=function(){ return N.ids[N.i]===id; };
+  var extra=(words||[]).filter(function(w){ return /[A-Za-z]{3}/.test(w.t); }).map(function(w){ return {t:w.t,c:w.c,src:'v9'}; });
+  if(cur()) renderNMHelp(c);
+  try{
+    var res=await CardRead.run(c,{fast:true,extraFrags:extra,shouldStop:function(){ return rd.stop||(N.ids[N.i]!==id&&N.i>N.ids.indexOf(id)); },step:function(m){ st.step=m; if(cur()){ var e=$('hpStep'); if(e) e.textContent=m; } }});
+    if(rd.stop||(N.ids[N.i]!==id&&N.i>N.ids.indexOf(id))){ HP()[id]={aborted:true}; return false; }
+    st.res=res; st.busy=false; applyCloser(c,res); c.ocr10=Date.now(); saveCard(c); log('closer '+id+': '+(res.ms)+' ms, serial '+(res.serial&&res.serial.fill||'-')+', brand '+(res.brand.fill||'-')+', name '+(res.nameFill||'-'));
+  }catch(e){ st.busy=false; st.err=String(e&&e.message||e); log('closer fail '+id+': '+st.err); }
+  if(cur()){ renderNMForm(c); updateRd(); }
+  return true;
+}
+/* fill only empty fields, and only what two separate reads agree on. Marked "check this". */
+function applyCloser(c,res){
+  c.guess=c.guess||{}; var any=0; function fill(k,v){ if(v===''||v==null) return; if(c[k]===''||c[k]==null){ c[k]=(k==='year'?+v:v); c.guess[k]=1; any++; } }
+  if(res.serial&&res.serial.fill) fill('serial',res.serial.fill);
+  if(res.brand.fill) fill('brand',res.brand.fill);
+  if(res.nameFill) fill('player',res.nameFill);
+  if(res.backYear&&res.backYear.n>=2) fill('year',res.backYear.year);
+  if(any){ c.ocrN=(c.ocrN||0)+any; c.ocrTs=c.ocrTs||Date.now(); c.upd=Date.now(); }
+}
+function hpChip(cls,attr,val,txt){ return '<button type="button" class="hpc '+cls+'" '+attr+'="'+esc(val)+'">'+esc(txt)+'</button>'; }
+function setByName(c){ var S=window.CardGuess&&CardGuess.SETS||[]; for(var i=0;i<S.length;i++){ if(c.brand&&(c.brand===S[i][1]||c.brand.indexOf(S[i][1])===0)) return S[i]; } return null; }
+function stripCss(c,pos,zoom){ return 'background-image:url('+urlOf(c.front||c.back)+');background-size:'+(zoom||100)+'% auto;background-position:'+pos; }
+/* build the help blocks and slide each one in after its field */
+function renderNMHelp(c){
+  var form=$('nmForm'), top=$('nmHelp'), bot=$('nmHelpB'); if(!form||!top||!bot||!c) return; var st=HP()[c.id]||{}, res=st.res, g=c.guess||{};
+  var needSer=(!c.serial||g.serial)&&!c.noSerial, needBrand=!c.brand||g.brand, needName=!c.player||g.player;
+  /* top: status, draw-a-box, from your cards, links, back photo */
+  var h='';
+  if(st.busy) h+='<div class="hpBusy"><span class="hpSpin"></span><div><b>Looking closer at this card…</b><small id="hpStep">'+esc(st.step||'')+'</small></div></div>';
+  else if(st.err) h+='<div class="pvnote">The closer look did not finish on this device. You can still use the tools below.</div>';
+  else if(!res&&!c.ocr10&&v10ok()&&(c.ocrTs||c.ocrFail||c.edited)) h+='<div class="hpRow"><button type="button" class="hpb" data-hp="closer">🔎 Look closer at this card</button></div>';
+  h+='<div class="hpRow"><button type="button" class="hpb gold" data-hp="box">✏️ Draw a box on the photo to read it</button></div>';
+  var fc=res&&res.fromCatalog||[]; if(fc.length&&(needName||needBrand)){
+    h+='<div class="hpBlk"><div class="hpT">From your cards <small>you saved these before</small></div><div class="hpRow">'+fc.map(function(e,i){ return hpChip('wide','data-cat',i,e.player+' · '+[e.year,e.brand].filter(Boolean).join(' ')+(e.team?' · '+e.team.replace(/^.*\s/,''):'')+(e.den?' · /'+e.den:'')); }).join('')+'</div></div>'; }
+  top.innerHTML=h; h='';
+  if(!c.back&&!c.backAsked&&(res||c.ocr10)&&(needBrand||needSer)){
+    h+='<div class="hpBlk soft"><div class="hpT">Back of the card handy? <small>It usually names the set and year. Optional.</small></div><div class="hpRow"><button type="button" class="hpb" data-hp="back">📷 Add the back photo</button><button type="button" class="hpb ghost" data-hp="noback">Not now</button></div></div>'; }
+  var set=setByName(c), links=window.CardGuess?CardGuess.links({year:c.year,brand:c.brand,player:c.player,team:c.team,den:window.CardGuess?CardGuess.denOf(c.serial):'',set:set}):[];
+  if(links.length&&(c.player||c.brand)) h+='<details class="hpBlk hpLinks"><summary>🔍 Search the web for this card</summary><div class="hpRow col">'+links.map(function(l){ return '<a class="hpa" target="_blank" rel="noopener noreferrer" href="'+esc(l.url)+'">'+esc(l.label)+' ↗</a>'; }).join('')+'<small>These open in your browser and send nothing from this app. Come back and tap the details you find.</small></div></details>';
+  bot.innerHTML=h;
+  /* blocks that sit under their field */
+  function after(key,html){ var old=form.querySelector('.hpAt[data-at="'+key+'"]'); if(old) old.remove(); if(!html) return; var inp=form.querySelector('[data-k="'+key+'"]'); var fld=inp&&inp.closest('.fld'); if(!fld) return; var d=document.createElement('div'); d.className='hpAt'; d.dataset.at=key; d.innerHTML=html; fld.appendChild(d); }
+  /* name */
+  var nm='';
+  if(needName&&res&&res.names.length){ var seen={}; var chips=res.names.filter(function(n){ var t=n.name+n.jr; if(seen[t]||t===c.player) return false; seen[t]=1; return n.n>=2&&n.name.split(' ')[1].length>=4; }).slice(0,2);
+    if(chips.length) nm='<div class="hpT">Is it one of these? <small>tap if right</small></div><div class="hpRow">'+chips.map(function(n){ return hpChip('','data-nm',n.name+n.jr,n.name+n.jr); }).join('')+'</div>'; }
+  after('player',nm);
+  /* brand */
+  var bh='';
+  if(needBrand){
+    var readNames=[]; (res&&res.brand.ranked||[]).slice(0,4).forEach(function(r){ readNames.push(r.set[1]); });
+    var chips2=CardGuess.brandChips(c,readNames,LAST.brand).slice(0,10);
+    bh+='<div class="hpT">Set <small>tap one, or type it above</small></div>';
+    if(res&&res.strips) bh+='<img class="hpCrop" alt="Zoom on the bottom of the card" src="'+res.strips.bottom+'"><img class="hpCrop" alt="Zoom on the top of the card" src="'+res.strips.top+'">';
+    bh+='<div class="hpRow">'+chips2.map(function(x){ return hpChip(x.why==='read'?'read':'','data-br',x.n,(x.why==='read'?'👀 ':'')+x.n); }).join('')+'</div>';
+    var gs=(res&&res.guesses||[]).slice(0,3); if(gs.length){ bh+='<div class="hpT">Looks like <small>check this</small></div>'+gs.map(function(x,i){ return '<div class="hpG"><span>'+esc(x.label)+'</span><button type="button" class="hpc" data-gu="'+i+'">Use</button></div>'; }).join(''); }
+  }
+  if(st.yearFor&&st.yearFor.years&&st.yearFor.years.length&&(!c.year||g.year)) bh+='<div class="hpT">Which year? <small>the © line on the back says</small></div><div class="hpRow">'+st.yearFor.years.map(function(y){ return hpChip('','data-yr',y,y); }).join('')+'</div>';
+  after('brand',bh);
+  /* serial */
+  var sh='';
+  if(c.noSerial) sh='<div class="hpRow"><small>Marked “not numbered”.</small><button type="button" class="hpc ghost" data-hp="numbered">Undo</button></div>';
+  else if(needSer){
+    var sg=(c.serial&&g.serial)?[]:((res&&res.serial&&res.serial.suggest)||[]).filter(function(x){ return x.n>=2&&x.text!==c.serial; }).slice(0,3);
+    sh+='<div class="hpT">Serial number <small>the “07/10” stamp, if there is one</small></div>';
+    var crop=res&&res.crop; if(crop) sh+='<img class="hpCrop" alt="Zoom on the serial area" src="'+crop+'">';
+    else sh+='<div class="pvnote">Look at the bottom edge of the card in the photo, or draw a box around the stamp.</div>';
+    if(c.serial&&g.serial) sh+='<div class="hpRow"><small>I read <b>'+esc(c.serial)+'</b>. Does the zoom agree?</small></div>';
+    sh+='<div class="hpRow">'+(c.serial&&g.serial?hpChip('ok','data-sok','1','✓ Yes, '+c.serial):'')+sg.map(function(x){ return hpChip('big','data-ss',x.text,x.text); }).join('')+'<button type="button" class="hpc big key" data-hp="kp">⌨ Type it</button><button type="button" class="hpc big" data-hp="nn">Not numbered</button></div>';
+  }
+  after('serial',sh);
+}
+/* clicks on the help blocks (they live inside #nmR) */
+$('nmR').addEventListener('click',function(e){
+  var b=e.target.closest('[data-hp],[data-nm],[data-br],[data-gu],[data-yr],[data-ss],[data-sok],[data-cat]'); if(!b||!$('nmR').contains(b)) return; var c=byId(N.ids[N.i]); if(!c) return; var st=HP()[c.id]||{}, res=st.res, d=b.dataset;
+  function setF(k,v){ setField(c,k,v); }
+  if(d.hp==='box'){ openBox(c); return; }
+  if(d.hp==='kp'){ openKeypad(c); return; }
+  if(d.hp==='nn'){ c.noSerial=true; if(c.guess&&c.guess.serial&&c.serial){ c.serial=''; delete c.guess.serial; } saveCard(c); renderNMForm(c); return; }
+  if(d.hp==='numbered'){ c.noSerial=false; saveCard(c); renderNMForm(c); return; }
+  if(d.hp==='noback'){ c.backAsked=1; saveCard(c); renderNMHelp(c); return; }
+  if(d.hp==='back'){ $('nmBackFile').click(); return; }
+  if(d.hp==='closer'){ if(!v10ok()){ MC().toast('The reader files are missing.'); return; } if(window.CardOCR) CardOCR.init(function(){}).then(function(){ readCloser(c,[]); }); return; }
+  if(d.nm){ setF('player',d.nm); renderNMForm(c); return; }
+  if(d.br){ setF('brand',d.br); st.yearFor=null; var S=setByName(c); if(S&&S[4]&&S[4].length&&!c.year){ st.yearFor={years:S[4]}; HP()[c.id]=st; } renderNMForm(c); return; }
+  if(d.gu!==undefined){ var gq=res&&res.guesses[+d.gu]; if(!gq) return; setF('brand',gq.brand); if(gq.years&&gq.years.length&&(!c.year||(c.guess&&c.guess.year))) st.yearFor=gq; if(gq.sub==='Autographs'&&!c.auto){ c.auto=true; c.guess=c.guess||{}; c.guess.flags=1; } renderNMForm(c); return; }
+  if(d.yr){ setF('year',d.yr); st.yearFor=null; renderNMForm(c); return; }
+  if(d.ss){ setF('serial',d.ss); renderNMForm(c); return; }
+  if(d.sok){ if(c.guess) delete c.guess.serial; c.edited=true; saveCard(c); renderNMForm(c); return; }
+  if(d.cat!==undefined){ var en=res&&res.fromCatalog[+d.cat]; if(!en) return; if(en.player&&(!c.player||(c.guess&&c.guess.player))) setF('player',en.player); if(en.brand&&(!c.brand||(c.guess&&c.guess.brand))) setF('brand',en.brand); if(en.year&&(!c.year||(c.guess&&c.guess.year))) setF('year',en.year); if(en.team&&!c.team) setF('team',en.team); renderNMForm(c); return; }
+});
+/* back photo, added from the Name screen */
+$('nmBackFile').addEventListener('change',async function(){
+  var f=this.files&&this.files[0]; this.value=''; var c=byId(N.ids[N.i]); if(!f||!c) return;
+  c.back=f; c.bsize=f.size; c.backAsked=1; c.upd=Date.now(); delete HP()[c.id]; c.ocr10=0; saveCard(c); drawNMPhoto(c); MC().toast('Back photo added. Looking at it now.',2200);
+  if(!v10ok()) return; try{ await CardOCR.init(function(){}); }catch(e){ return; } N.rd=N.rd||{stop:false}; if(N.rd.stop) N.rd.stop=false; var snap=JSON.stringify([c.brand,c.year,c.serial,c.player]); try{ await readCloser(c,[]); }catch(e){} var now=JSON.stringify([c.brand,c.year,c.serial,c.player]); MC().toast(now!==snap?'The back told me something. Please check it.':'I looked at the back. Nothing new to fill in, so type or tap what you see.',3600);
+});
+/* ----- big number keypad for a serial like 07/10 ----- */
+var KP={c:null,num:'',den:'',f:'num'};
+var DENS=['1','5','10','25','49','50','75','99','150','199','250','499'];
+function openKeypad(c,pre){
+  KP.c=c; var m=String(pre||'').match(/(\d+)\s*\/\s*(\d+)/)||String(c.serial||'').match(/^(\d+)\s*\/\s*(\d+)$/); KP.num=m?m[1]:''; KP.den=m?m[2]:''; KP.f=KP.num||!KP.den?(KP.num?'den':'num'):'num'; if(!m) KP.f='num';
+  var st=HP()[c.id]||{}, res=st.res, crop=(res&&res.crop)||'';
+  $('kpCrop').innerHTML=crop?'<img alt="Zoom on the serial area" src="'+crop+'">':'';
+  var sg=((res&&res.serial&&res.serial.suggest)||[]).filter(function(x){return x.n>=2;}).slice(0,3); $('kpSug').innerHTML=sg.length?('<small>I read:</small> '+sg.map(function(x){return hpChip('big','data-kps',x.text,x.text);}).join('')):'';
+  $('kpDens').innerHTML=DENS.map(function(d){ return hpChip('','data-kd',d,'/'+d); }).join('')+hpChip('','data-kd','1/1','1 of 1');
+  kpDraw(); $('kpOv').hidden=false; document.body.classList.add('ovOpen');
+}
+function kpDraw(){ var n=$('kpNum'),d=$('kpDen'); n.textContent=KP.num||'__'; d.textContent=KP.den||'__'; n.className=(KP.f==='num'?'on ':'')+(KP.num?'':'ph'); d.className=(KP.f==='den'?'on ':'')+(KP.den?'':'ph');
+  var ok=!!KP.den, ok2=$('kpOk'); ok2.disabled=!ok; ok2.textContent=ok?('Use '+(KP.num?KP.num:'')+'/'+KP.den+(KP.num?'':' (number unknown)')):'Type the print run first, like 10'; }
+function kpKey(k){ var f=KP.f==='num'?'num':'den'; if(k==='b'){ KP[f]=KP[f].slice(0,-1); } else if(k==='c'){ KP.num=''; KP.den=''; KP.f='num'; } else if(k==='/'){ KP.f='den'; } else if(KP[f].length<4){ KP[f]+=k; } kpDraw(); }
+$('kpOv').addEventListener('click',function(e){
+  var t=e.target.closest('button'); if(!t) { if(e.target===$('kpOv')) closeKeypad(); return; }
+  if(t.id==='kpNum'){ KP.f='num'; kpDraw(); return; } if(t.id==='kpDen'){ KP.f='den'; kpDraw(); return; }
+  if(t.dataset.k){ kpKey(t.dataset.k); return; }
+  if(t.dataset.kd){ var v=t.dataset.kd; if(v==='1/1'){ KP.num='1'; KP.den='1'; } else { KP.den=v; KP.f='num'; } kpDraw(); return; }
+  if(t.dataset.kps){ var m=t.dataset.kps.match(/(\d+)\/(\d+)/); if(m){ KP.num=m[1]; KP.den=m[2]; kpDraw(); } return; }
+  if(t.id==='kpOk'){ if(!KP.den) return; var c=KP.c, v2=(KP.num?KP.num:'')+'/'+KP.den; c.noSerial=false; setField(c,'serial',v2); closeKeypad(); if(N.ids[N.i]===c.id) renderNMForm(c); if(KP.after) KP.after(v2); return; }
+  if(t.id==='kpNo'){ var c2=KP.c; c2.noSerial=true; if(c2.serial&&c2.guess&&c2.guess.serial){ c2.serial=''; delete c2.guess.serial; } saveCard(c2); closeKeypad(); if(N.ids[N.i]===c2.id) renderNMForm(c2); return; }
+  if(t.id==='kpCancel'){ closeKeypad(); return; }
+});
+function closeKeypad(){ $('kpOv').hidden=true; KP.after=null; if($('bxOv').hidden) document.body.classList.remove('ovOpen'); }
+/* ----- draw a box on the photo ----- */
+var BX={c:null,side:'front',kind:'name',box:null,busy:false,tok:0};
+function openBox(c){ BX.c=c; BX.side=(N.side==='back'&&c.back)?'back':'front'; BX.box=null; BX.kind=BX.kind||'name'; $('bxImg').src=urlOf(BX.side==='back'?c.back:(c.front||c.back)); $('bxRect').style.display='none'; $('bxRes').innerHTML='<div class="pvnote">Drag a box around the printed name, serial number or set name. I will read just that part, bigger and several ways.</div>';
+  $('bxFlip').style.display=(c.front&&c.back)?'':'none'; bxKindUI(); $('bxOv').hidden=false; document.body.classList.add('ovOpen'); }
+function bxKindUI(){ [].forEach.call($('bxKind').children,function(b){ b.classList.toggle('on',b.dataset.kind===BX.kind); }); }
+function closeBox(){ BX.tok++; $('bxOv').hidden=true; if($('kpOv').hidden) document.body.classList.remove('ovOpen'); renderNMForm(BX.c); }
+(function(){
+  var st=$('bxStage'), rect=$('bxRect'), p0=null;
+  function pos(e){ var r=$('bxImg').getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)),r:r}; }
+  function draw(a,b){ var r=$('bxImg').getBoundingClientRect(), s=st.getBoundingClientRect(); var x0=Math.min(a.x,b.x),x1=Math.max(a.x,b.x),y0=Math.min(a.y,b.y),y1=Math.max(a.y,b.y); rect.style.display='block'; rect.style.left=(r.left-s.left+x0*r.width)+'px'; rect.style.top=(r.top-s.top+y0*r.height)+'px'; rect.style.width=((x1-x0)*r.width)+'px'; rect.style.height=((y1-y0)*r.height)+'px'; return [x0,y0,x1,y1]; }
+  st.addEventListener('pointerdown',function(e){ if(e.target.closest('button')) return; p0=pos(e); try{ st.setPointerCapture(e.pointerId); }catch(x){} BX.tok++; e.preventDefault(); });
+  st.addEventListener('pointermove',function(e){ if(!p0) return; BX.box=draw(p0,pos(e)); });
+  function end(e){ if(!p0) return; var b=BX.box; p0=null; if(!b||(b[2]-b[0])<.03||(b[3]-b[1])<.02){ BX.box=null; rect.style.display='none'; $('bxRes').innerHTML='<div class="pvnote">That box is too small. Drag a bit larger, around the whole word or number.</div>'; return; } bxRead(); }
+  st.addEventListener('pointerup',end); st.addEventListener('pointercancel',end);
+})();
+async function bxRead(){
+  var c=BX.c, box=BX.box, kind=BX.kind, tok=++BX.tok; if(!box||!c) return; var res=$('bxRes'); res.innerHTML='<div class="hpBusy"><span class="hpSpin"></span><div><b>Reading just this box…</b><small>a few seconds</small></div></div>';
+  try{
+    if(!v10ok()) throw new Error('The reader files are missing');
+    await CardOCR.init(function(){}); var blob=BX.side==='back'?c.back:(c.front||c.back), im=await CardOCR.loadImg(blob);
+    var crop=CardRead.cropToURL(im,box,.01,640), reads=await CardText.readBox(im,box,kind==='serial'?'serial':'text',{});
+    if(tok!==BX.tok) return; var h='<img class="hpCrop" alt="What I looked at" src="'+crop+'">';
+    if(kind==='serial'){
+      var votes=[]; reads.forEach(function(r){ r.lines.concat([r.lines.join('')]).forEach(function(ln){ String(ln).split(/\s+/).forEach(function(tk){ CardSerial._parseSerial(tk).forEach(function(x){ if(CardSerial.plausible(x.num,x.den)) votes.push(x.num+'/'+x.den); }); }); }); });
+      var cnt={}; votes.forEach(function(v){ cnt[v]=(cnt[v]||0)+1; }); var ks=Object.keys(cnt).sort(function(a,b){ return cnt[b]-cnt[a]; }).slice(0,4);
+      h+=ks.length?'<div class="hpT">I think it says <small>check this against the picture</small></div><div class="hpRow">'+ks.map(function(k){ return hpChip('big','data-bs',k,k); }).join('')+'</div>':'<div class="pvnote">I could not read a number in that box. Type what you see.</div>';
+      h+='<div class="hpRow"><button type="button" class="hpc big key" data-bx="kp">⌨ Type it</button><button type="button" class="hpc big" data-bx="nn">Not numbered</button></div>';
+    } else {
+      var lines=[]; reads.forEach(function(r,i){ r.lines.forEach(function(ln){ var t=String(ln).replace(/[^A-Za-z\u00C0-\u017F.'\- ]+/g,' ').replace(/\s+/g,' ').trim(); if(t.replace(/[^A-Za-z]/g,'').length>=3) lines.push({t:t,c:r.conf,src:'box'+i}); }); });
+      var cnt2={},conf={}; lines.forEach(function(l){ var k=l.t.toUpperCase(); cnt2[k]=(cnt2[k]||0)+1; conf[k]=Math.max(conf[k]||0,l.c); });
+      var best=Object.keys(cnt2).sort(function(a,b){ return (cnt2[b]*2+conf[b]/50)-(cnt2[a]*2+conf[a]/50); }).slice(0,4);
+      var show=function(s){ return s.split(' ').map(function(w){ return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); };
+      var chips=[]; if(kind==='name'){ CardGuess.names(lines).slice(0,2).forEach(function(n){ chips.push(n.name+n.jr); }); } else { var tk=CardGuess.tokens(lines); CardGuess.rankSets(tk,c.sport).slice(0,3).forEach(function(r){ chips.push(r.set[1]); }); }
+      best.forEach(function(b){ if(chips.length<3&&chips.map(function(x){return x.toUpperCase();}).indexOf(b)<0) chips.push(show(b)); });
+      h+=chips.length?'<div class="hpT">I think it says <small>check this against the picture</small></div><div class="hpRow">'+chips.map(function(k){ return hpChip('big','data-bs',k,k); }).join('')+'</div>':'<div class="pvnote">I could not read letters in that box. Try a slightly bigger box, or type it.</div>';
+      h+='<div class="hpT">Or type it</div><div class="hpRow"><input type="text" id="bxTxt" autocomplete="off" autocapitalize="words" placeholder="'+(kind==='name'?'Player name':'Set name')+'" value="'+esc(chips[0]||'')+'"><button type="button" class="hpc big ok" data-bx="use">Use this</button></div>';
+    }
+    res.innerHTML=h;
+  }catch(err){ res.innerHTML='<div class="pvnote">I could not read that box ('+esc(err.message||err)+'). Type it instead.</div><div class="hpRow"><input type="text" id="bxTxt" placeholder="Type it here"><button type="button" class="hpc big ok" data-bx="use">Use this</button></div>'; }
+}
+$('bxOv').addEventListener('click',function(e){
+  var t=e.target.closest('button'); if(!t) return; var c=BX.c;
+  if(t.id==='bxClose'){ closeBox(); return; }
+  if(t.id==='bxFlip'){ BX.side=BX.side==='front'?'back':'front'; $('bxImg').src=urlOf(BX.side==='back'?c.back:c.front); BX.box=null; $('bxRect').style.display='none'; return; }
+  if(t.dataset.kind){ BX.kind=t.dataset.kind; bxKindUI(); if(BX.box) bxRead(); return; }
+  var kind=BX.kind, put=function(v){ if(kind==='serial'){ c.noSerial=false; setField(c,'serial',v); } else if(kind==='name') setField(c,'player',v); else { setField(c,'brand',v); } MC().toast('Added. Please check it.',1800); closeBox(); };
+  if(t.dataset.bs){ if(kind==='serial'||true){ var inp=$('bxTxt'); if(inp&&kind!=='serial'){ inp.value=t.dataset.bs; return; } put(t.dataset.bs); } return; }
+  if(t.dataset.bx==='use'){ var v=($('bxTxt')&&$('bxTxt').value||'').trim(); if(!v){ MC().toast('Type or tap something first.'); return; } put(v); return; }
+  if(t.dataset.bx==='kp'){ $('bxOv').hidden=true; openKeypad(c); KP.after=null; return; }
+  if(t.dataset.bx==='nn'){ c.noSerial=true; saveCard(c); closeBox(); return; }
+});
+
 /* Reader for the listing sheet: same bundled reader, result turned into the "might be" lists that sheet shows */
 async function ocrCard(c,outId){
   if(!window.CardOCR||!window.CardParse) throw new Error('the reader files are missing');
@@ -878,7 +1065,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.9 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -916,7 +1103,7 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.9","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
