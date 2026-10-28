@@ -7,18 +7,29 @@
 1. **Find soft light from the side.** A window or a lamp to one side works well. Skip the bright light right above you.
 2. **Clear a flat spot.** Lay your cards out in rows, face up.
 3. **Keep your hands and phone out of the light.** That avoids shadows.
-4. **Take cards out of cases if you can.** Shiny cases cause glare. If a card stays in its case, tilt your phone a little.
+4. **Leave valuable cards in their sleeves or top-loaders.** You don't need to take them out. See "Sleeves and top-loaders" below.
+5. **Put a plain, light-colored mat or sheet of paper under the cards** if your counter is dark or speckled (granite, dark wood).
 
 ## Scan the fronts
 
 1. On Home, tap the big gold **Start a scan**.
 2. Tap **Start camera**. Hold your phone above the first card.
 3. Tap **Start sweep**.
-4. **Move slowly** across the row. Your phone follows two rows at a time.
+4. **Move slowly** across the row. Two rows? Glide to the end of the first row, drop down to the next one, and glide back the other way. Any direction works.
 5. Keep going until you reach up to 30 cards. Then tap **Stop**.
-6. Glare? Tilt the phone or card a little.
+6. Glare? Tilt a little so the shine slides off the edge.
 
 Slow is good. If you go slowly, the app waits for a clear edge or gap between cards before it counts a new one.
+
+## Sleeves and top-loaders
+
+Your cards stay protected. Keep them in their sleeves or top-loaders. We can read them through the plastic.
+
+- **Keep the "Sleeved / top-loader" switch on.** It is on by default. It sits next to Graded or Raw before you start, and the **Sleeve** button on the camera screen turns it on or off.
+- **Tilt a little for shine.** Plastic catches light. If the app says to tilt, tip the phone or the card a little so the shine slides off the edge. Shine on the edge of the plastic is fine.
+- **Use a light mat.** A plain, light-colored mat or sheet of paper under the cards helps a lot. A dark or speckled counter can make photos dark. The app may show a soft tip. It never stops you.
+- **Keep it steady.** Glide slowly. Sleeves are a bit shiny, so a steady hand matters more.
+- **Photo needs a look?** A tile marked **check** has a **Retake** button. Tap it and take that one card again. No need to redo the row.
 
 ## Then the backs
 
