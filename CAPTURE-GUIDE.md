@@ -10,6 +10,13 @@
 4. **Leave valuable cards in their sleeves or top-loaders.** You don't need to take them out. See "Sleeves and top-loaders" below.
 5. **Put a plain, light-colored mat or sheet of paper under the cards** if your counter is dark or speckled (granite, dark wood).
 
+### 4 quick tips for clean photos (v0.8)
+
+- **Tilt the phone slightly** so shine slides off the card.
+- **Avoid light straight overhead.** It makes glare and shadows.
+- **Soft light from one side** (a window or a lamp off to the side) works best.
+- **Plain, light mat** (or a sheet of paper) under the cards.
+
 ## Scan the fronts
 
 1. On Home, tap the big gold **Start a scan**.
@@ -60,6 +67,30 @@ Backs matter. The year and set are printed there.
 7. The **Home** button at the top is always there. If a scan isn't saved, it offers **Save first**.
 
 Home lists **Your scans**. Tap one to open its cards again anytime.
+
+## Clean up photo (new in v0.8)
+
+On a card, tap **Clean up photo**. Or tap **Clean up photos** on a binder to do them all (you can Stop, and **Undo all** afterward).
+
+**What it does (all on your phone, nothing uploaded, no AI image tools):** straightens the card and re-centers it on a neutral gray background, evens out uneven light and shadows, nudges the color to neutral, softens only the brightest glare, and sharpens a little.
+
+**What it never does:** no touching-up, no smoothing or removing scratches, creases, dents, edge or corner wear, and no change to the card's own centering or borders. Flaws stay visible.
+
+- Your original is always kept. Tap **Original** / **Cleaned** to flip between them.
+- Cleaned photos are labeled "Cleaned scan, card unchanged" with a short note of what was done.
+- If the card edges can't be found, it only evens out the light and tells you so.
+- Exports: the zip holds `-original.jpg` and `-cleaned.jpg` for each card and a README. The CSVs list both file names. The JSON backup keeps both.
+- Slab labels stay readable (slabs are straightened by their outer edge).
+
+## Listing sheet (new in v0.8)
+
+On a card, tap **Listing sheet**. It is a draft for you to review and edit. Nothing is sent anywhere, there is no eBay connection, and **no price is suggested**. "Your price" is only what you type.
+
+- Title (80 characters max, with a counter) and description are drafted from the card details. They keep updating until you edit them. ↻ Re-draft asks before replacing your edits.
+- Anything the app guessed (auto-read, or carried over from the last card) shows a **check this** badge until you tap it, type in the field, or choose a suggestion. **They all look right** clears all of them.
+- Sport defaults to Baseball, Football, Basketball (or Other).
+- **Copy listing text** copies the title and description. Photos are not copied, so save them from the card or use the photo zip.
+- **Backup tab > Export listing sheets (CSV)** has eBay-item-specifics-style columns. It is labeled "draft for review, not an official eBay file".
 
 ## Your Binder (new in v0.7)
 
@@ -125,6 +156,11 @@ You're doing great. Every card you scan is one less to wonder about.
 - v0.5: instant Saving screen, "Your cards" results with a What next? panel, real Home with Your scans and Start a scan, Home button on every screen (Save first), still photos kept in IndexedDB (never the video), Save to my phone uses the share sheet when available and stays put. Stricter card changes (net sweep distance, hysteresis, image similarity merge). Duplicate flags, Merge with previous, Remove duplicate, editable count. Backup: `index.html.bak-v0.4`.
 - v0.5.1: flip-through Review screen (large front/back, next/prev or swipe, Sell/Keep/Grade labels kept on the phone and added to the zip as cards.csv), Send screen (Share with files, Email to myself, Send to my collection coming soon). Backup: `index.html.bak-v0.5`.
 - v0.7: Binder (IndexedDB, local only): Binders home tab, All cards plus custom and inventory binders, card detail with notes, own photos, status, cost and sold profit, Name your cards quick entry (optional on-device auto-read), export JSON/CSV/zip and JSON import, storage.persist(). Scan: always-visible Capture now button, timed-capture fallback when tracking looks stuck, Pause picking mode, Info/debug panel. Earlier scans move into the Binder automatically. Split into index.html, binder.js, binder.css. Backup: `index.html.bak-v0.6`.
+- v0.8: Clean up photo (per card and batch, with Original toggle, Undo all), Listing sheet (editable draft, "check this" badges, copy text, listing CSV), sport field, undo for deleted cards, capture tips on the scan screens, near-black and gold palette with walnut surface variables (`:root` in index.html).
+
+## One-line test script (v0.8)
+
+> Open the page, Backup tab > Import a backup, add a few cards, open a binder, tap a card > Clean up photo, tap Original then Cleaned, tap Listing sheet, tap They all look right, edit the title, tap Copy listing text, then Backup tab > Export listing sheets and Export photos (zip); reload and confirm everything is still there.
 
 ## One-line test script (v0.7)
 
