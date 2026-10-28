@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10 (Mr. Moose Enterprises, LLC) - Listing sheet logic (pure functions, no network, no prices).
+/* Collectors Desk v0.10.2 (Mr. Moose Enterprises, LLC) - Listing sheet logic (pure functions, no network, no prices).
    Drafts a title and description from the card's fields. Everything here is a DRAFT for the user to review. */
 (function(){
 'use strict';
@@ -25,18 +25,26 @@ function draftTitle(c){
   var out=join(); if(out.length>MAXT){ out=out.slice(0,MAXT); out=out.replace(/\s+\S*$/,'')||out; }
   return out;
 }
+function sportKnown(c){ return !!(s(c.sport)&&(c.sportOk||(c.guess&&c.guess.sport)||c.sport!=='Baseball')); }
+function sentence(c){
+  var subj=[s(c.year),s(c.brand),s(c.player)].filter(Boolean).join(' '); if(s(c.number)) subj+=(subj?' ':'')+'#'+s(c.number).replace(/^#/,'');
+  var bits=[]; if(s(c.parallel)) bits.push(s(c.parallel)); if(s(c.serial)) bits.push('numbered '+s(c.serial)); var f=features(c).map(function(x){return x==='Patch/Relic'?'patch/relic':x.toLowerCase()}); if(f.length) bits.push(f.join(', '));
+  var out=subj?subj:''; if(bits.length) out+=(out?', ':'')+bits.join(', ');
+  if(!out) return ''; out=out.charAt(0).toUpperCase()+out.slice(1);
+  var sp=sportKnown(c)?s(c.sport).toLowerCase():'', tm=s(c.team);
+  return out+'.'+(tm||sp?' '+(tm?tm+(sp?', '+sp+' card.':'.'):'A '+sp+' card.'):'');
+}
+/* the description is written only from fields that are filled in. It never says anything about condition, price or parallels that were not entered. */
 function draftDesc(c,opts){
-  opts=opts||{}; var L=[], t=draftTitle(c), f=features(c), fl=flawList(c);
-  var core=[['Player',c.player],['Sport',c.sport],['Team',c.team],['Year',c.year],['Set',c.brand],['Card number',c.number?'#'+s(c.number).replace(/^#/,''):''],['Parallel / variation',c.parallel],['Serial / print run',c.serial]].filter(function(x){return s(x[1])});
-  L.push(t||'Trading card');
-  L.push('');
-  core.forEach(function(x){ L.push(x[0]+': '+s(x[1])); });
-  if(f.length) L.push('Features: '+f.join(', '));
+  opts=opts||{}; var L=[], fl=flawList(c), lead=sentence(c);
+  var core=[['Player',c.player],['Sport',sportKnown(c)?c.sport:''],['Team',c.team],['Year',c.year],['Set',c.brand],['Card number',c.number?'#'+s(c.number).replace(/^#/,''):''],['Parallel / variation',c.parallel],['Serial / print run',c.serial]].filter(function(x){return s(x[1])});
+  L.push(lead||'Trading card');
+  if(core.length){ L.push(''); core.forEach(function(x){ L.push(x[0]+': '+s(x[1])); }); }
   L.push('');
   if(c.cond==='graded'){ L.push('Graded: '+(gradedLabel(c)||'grade not entered')+(s(c.cert)?'. Certification number: '+s(c.cert):'')+'.'); if(s(c.condNotes)) L.push(s(c.condNotes)); }
-  else { L.push('Raw card, not graded.'+(s(c.condNotes)?' '+s(c.condNotes):'')); }
+  else if(s(c.condNotes)) L.push(s(c.condNotes));
   if(fl.length||s(c.flawText)){ L.push('Flaws I noticed: '+(fl.length?fl.join(', '):'')+(fl.length&&s(c.flawText)?'. ':'')+(s(c.flawText)?s(c.flawText):'')+(/[.!?]$/.test(s(c.flawText))||!s(c.flawText)?'':'.')); }
-  else L.push('I have not noted any flaws. Please look closely at the photos.');
+  else L.push('Please look closely at the photos to judge condition.');
   L.push('');
   L.push('The photos show the actual card you will receive.');
   if(opts.cleaned) L.push('Photos were straightened and brightened for lighting only. The card itself has not been edited.');

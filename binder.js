@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10.1 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.10.2 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -111,7 +111,7 @@ async function removeCard(c,tomb){
   if(tomb!==false){ B.gone[c.id]=1; await put('gone',{id:c.id}); }
 }
 
-/* ---------- v0.10.1: Recently deleted (soft delete, kept 30 days; the photos' storage is freed only when it purges) ----------
+/* ---------- v0.10.2: Recently deleted (soft delete, kept 30 days; the photos' storage is freed only when it purges) ----------
    A deleted card is only marked: its record and photos stay in the 'cards' store untouched, and a small note in the 'gone' store
    says "deleted at <time>, was in these binders". So deleting 30 cards is instant (one tiny write), and Undo / Restore just remove the note. */
 var TRASH_MS=30*864e5;
@@ -520,7 +520,9 @@ var FDEF={
 var GK={grader:'slab',grade:'slab',cert:'slab'};   /* which "check this" badge a field belongs to */
 function cleanOf(c,side){ var k=c.clean&&c.clean[side]; return (k&&c[side]&&k.src===c[side].size)?k:null; }
 function hasClean(c){ return !!(cleanOf(c,'front')||cleanOf(c,'back')); }
-function gbadge(c,k){ return (c.guess&&c.guess[k])?' <button type="button" class="chk" data-ck="'+k+'">check this</button>':''; }
+var CLRK=['player','team','year','brand','number','serial','parallel'];
+function gbadge(c,k){ return (c.guess&&c.guess[k])?' <button type="button" class="chk" data-ck="'+k+'">check this</button>'+(CLRK.indexOf(k)>=0?'<button type="button" class="chk clr" data-cl="'+k+'" aria-label="Clear '+k+'">✕ clear</button>':''):''; }
+function whyHtml(c,k){ var w=c.why&&c.why[k]; if(!(c.guess&&c.guess[k])||!w||!w.t) return ''; return esc(w.t)+(w.u?' <a href="'+esc(w.u)+'" target="_blank" rel="noopener">source ↗</a>':''); }
 function lab(c,k,text,forId,bk){ return '<label'+(forId?' for="'+forId+'"':'')+'>'+text+gbadge(c,bk||k)+'</label>'; }
 function ensureDrafts(c){ if(!c.ls) c.ls={title:'',titleEdited:false,desc:'',descEdited:false}; if(!c.ls.titleEdited) c.ls.title=Listing.draftTitle(c); if(!c.ls.descEdited) c.ls.desc=Listing.draftDesc(c,{cleaned:hasClean(c)}); }
 function buildForm(host,c,keys,onch){
@@ -528,8 +530,8 @@ function buildForm(host,c,keys,onch){
   keys.forEach(function(k){
     var d=FDEF[k];
     if(d){ var v=k==='tags'?(c.tags||[]).join(', '):(c[k]===''||c[k]==null?'':c[k]);
-      h+='<div class="fld">'+lab(c,k,d[0],'f_'+k)+'<input id="f_'+k+'" data-k="'+k+'" type="text" inputmode="'+(d[1]==='text'?'text':d[1])+'" placeholder="'+esc(d[2])+'" value="'+esc(v)+'" autocomplete="off" autocapitalize="'+(k==='tags'||k==='serial'?'none':'words')+'" enterkeyhint="next">'+(d[3]?'<div class="sug" data-sug="'+k+'"></div>':'')+'</div>'; }
-    else if(k==='sport') h+='<div class="fld"><label>Sport</label><div class="segb" data-seg="sport">'+SPORTS.map(function(x){return '<button data-v="'+x+'" class="'+(c.sport===x?'on':'')+'">'+x+'</button>'}).join('')+'</div></div>';
+      h+='<div class="fld">'+lab(c,k,d[0],'f_'+k)+'<input id="f_'+k+'" data-k="'+k+'" type="text" inputmode="'+(d[1]==='text'?'text':d[1])+'" placeholder="'+esc(d[2])+'" value="'+esc(v)+'" autocomplete="off" autocapitalize="'+(k==='tags'||k==='serial'?'none':'words')+'" enterkeyhint="next">'+(d[3]?'<div class="sug" data-sug="'+k+'"></div>':'')+'<div class="why" data-why="'+k+'">'+whyHtml(c,k)+'</div>'+(k==='team'?'<div class="autoT" data-autoT></div>':'')+'</div>'; }
+    else if(k==='sport') h+='<div class="fld"><label data-lab="sport">Sport'+gbadge(c,'sport')+'</label><div class="segb" data-seg="sport">'+SPORTS.map(function(x){return '<button data-v="'+x+'" class="'+(c.sport===x?'on':'')+'">'+x+'</button>'}).join('')+'</div><div class="why" data-why="sport">'+whyHtml(c,'sport')+'</div><div class="sportAsk" data-sportask></div></div>';
     else if(k==='cond'){
       var gopts='<option value="">Grader…</option>'+GRADERS.map(function(g){return '<option'+(c.grader===g?' selected':'')+'>'+g+'</option>'}).join('');
       h+='<div class="fld">'+lab(c,'cond','Raw or graded?',null,'slab')+'<div class="segb" data-seg="cond"><button data-v="raw" class="'+(c.cond!=='graded'?'on':'')+'">Raw</button><button data-v="graded" class="'+(c.cond==='graded'?'on':'')+'">Graded</button></div>'+
@@ -557,7 +559,7 @@ function buildForm(host,c,keys,onch){
       if(s===''){ pf.className='profit'; pf.textContent='Enter the sold price to see your profit.'; }
       else{ var p=s-(cost||0); pf.className='profit'+(p<0?' neg':''); pf.textContent='Profit: '+money(p)+(cost===null?' (no cost entered, so this is the full sold price)':' (sold '+money(s)+' − cost '+money(cost)+')'); } }
   }
-  function dropBadge(k){ var bd=host.querySelector('[data-ck="'+(GK[k]||k)+'"]'); if(bd) bd.remove(); }
+  function dropBadge(k){ var bd=host.querySelector('[data-ck="'+(GK[k]||k)+'"]'); if(bd) bd.remove(); var cb=host.querySelector('[data-cl="'+k+'"]'); if(cb) cb.remove(); var w=host.querySelector('[data-why="'+k+'"]'); if(w) w.innerHTML=''; }
   function drafts(k){
     var t=G('f_title'), dd=G('f_desc'); if(!t&&!dd) return;
     if(k!=='title'&&k!=='desc'){ ensureDrafts(c); if(t&&document.activeElement!==t) t.value=c.ls.title; if(dd&&document.activeElement!==dd) dd.value=c.ls.desc; }
@@ -568,13 +570,41 @@ function buildForm(host,c,keys,onch){
     var box=host.querySelector('[data-sug="'+k+'"]'); if(!box) return;
     var items=sugFor(k,inp.value,c); box.innerHTML=items.map(function(x){return '<button type="button" data-sv="'+esc(x)+'">'+esc(x)+'</button>'}).join('');
   }
-  host.oninput=function(e){ var el=e.target; if(!el.dataset||!el.dataset.k) return; var k=el.dataset.k; setField(c,k,el.value); dropBadge(k); if(k==='cost'||k==='sold') derived(); sugRender(k,el); drafts(k); if(onch) onch(k); };
+  var WDT=buildForm.WDT||(buildForm.WDT={});
+  function syncBadge(f){ var lb=host.querySelector('label[for="f_'+f+'"]')||host.querySelector('[data-lab="'+f+'"]'); if(lb){ [].forEach.call(lb.querySelectorAll('.chk'),function(x){x.remove()}); lb.insertAdjacentHTML('beforeend',gbadge(c,f)); } var w=host.querySelector('[data-why="'+f+'"]'); if(w) w.innerHTML=whyHtml(c,f); }
+  function showSport(){ [].forEach.call(host.querySelectorAll('[data-seg="sport"] button'),function(b){ b.classList.toggle('on',b.dataset.v===c.sport); }); }
+  function autoBoxes(){
+    var sa=$f('[data-sportask]'); if(sa){ sa.innerHTML=(window.CardAuto&&CardAuto.askSport(c))?'<div class="saq"><b>Which sport is this card?</b> I could not tell from the photo. Tap one.</div><div class="sab">'+SPORTS.map(function(x){return '<button type="button" data-sa="'+x+'">'+x+'</button>'}).join('')+'</div>':''; }
+    var tb=$f('[data-autoT]'); if(!tb||!window.CardAuto) return; var h='';
+    if(!c.team&&c.player&&CardAuto.parts(c.player).n>=2){
+      var o=CardAuto.teamOptions(c)||[];
+      if(o.length>=1) h='<div class="hint2"><span>Team might be:</span>'+o.map(function(x){return '<button type="button" class="chip" data-at="'+esc(x.team)+'">'+esc(x.team)+'</button>'}).join('')+'</div>'+(o[0].url?'<div class="why"><a href="'+esc(o[0].url)+'" target="_blank" rel="noopener">source ↗</a></div>':'');
+      else if(!o.length&&navigator.onLine!==false&&!(WDT[c.player]==='none')) h='<div class="wdRow"><button type="button" class="chip" data-wd="1">'+(WDT[c.player]==='busy'?'Looking…':'🌐 Look up the team online')+'</button><small>Optional. Sends only the name “'+esc(c.player)+'” to wikidata.org. No photos, nothing else.</small></div>';
+    }
+    tb.innerHTML=h;
+  }
+  function autoRefresh(){
+    if(!window.CardAuto) return; var r=CardAuto.run(c,{},{noRead:true});
+    if(r.n){ r.fields.forEach(function(f){ var inp=host.querySelector('[data-k="'+f+'"]'); if(inp&&document.activeElement!==inp) inp.value=c[f]; if(f==='sport') showSport(); syncBadge(f); }); c.upd=Date.now(); saveCard(c); drafts('x'); }
+    autoBoxes();
+  }
+  host.oninput=function(e){ var el=e.target; if(!el.dataset||!el.dataset.k) return; var k=el.dataset.k; setField(c,k,el.value); dropBadge(k); if(k==='cost'||k==='sold') derived(); sugRender(k,el); drafts(k); if(k==='player'||k==='brand'||k==='team') autoRefresh(); if(onch) onch(k); };
   host.onchange=function(e){ var el=e.target; if(el.tagName==='SELECT'&&el.dataset.k){ setField(c,el.dataset.k,el.value); dropBadge(el.dataset.k); drafts(el.dataset.k); if(onch) onch(el.dataset.k); } };
   host.onfocusin=function(e){ var el=e.target; if(el.dataset&&el.dataset.k&&FDEF[el.dataset.k]&&FDEF[el.dataset.k][3]) sugRender(el.dataset.k,el); };
   host.onfocusout=function(e){ var el=e.target; if(el.dataset&&el.dataset.k){ var k=el.dataset.k; setTimeout(function(){ var bx=host.querySelector('[data-sug="'+k+'"]'); if(bx&&document.activeElement!==el) bx.innerHTML=''; },300); } };
   host.onclick=function(e){
-    var ck=e.target.closest('[data-ck]'); if(ck){ e.preventDefault(); delete c.guess[ck.dataset.ck]; c.edited=true; c.upd=Date.now(); saveCard(c); ck.remove(); if(onch) onch('guess'); return; }
-    var sb=e.target.closest('[data-sv]'); if(sb){ var box=sb.parentNode, k=box.dataset.sug, inp=host.querySelector('[data-k="'+k+'"]'); inp.value=sb.dataset.sv; setField(c,k,sb.dataset.sv); dropBadge(k); box.innerHTML=''; drafts(k); if(onch) onch(k); return; }
+    var cl=e.target.closest('[data-cl]'); if(cl){ e.preventDefault(); var ck2=cl.dataset.cl; c[ck2]=''; delete c.guess[ck2]; if(c.why) delete c.why[ck2]; c.noAuto=c.noAuto||{}; c.noAuto[ck2]=1; c.edited=true; c.upd=Date.now(); saveCard(c); var i2=host.querySelector('[data-k="'+ck2+'"]'); if(i2) i2.value=''; syncBadge(ck2); drafts(ck2); autoRefresh(); if(onch) onch(ck2); return; }
+    var ck=e.target.closest('[data-ck]'); if(ck){ e.preventDefault(); var kk=ck.dataset.ck; delete c.guess[kk]; if(kk==='sport') c.sportOk=true; c.edited=true; c.upd=Date.now(); saveCard(c); syncBadge(kk); if(kk==='player'||kk==='team') autoBoxes(); if(onch) onch('guess'); return; }
+    var sa=e.target.closest('[data-sa]'); if(sa){ setField(c,'sport',sa.dataset.sa); c.sportOk=true; saveCard(c); showSport(); syncBadge('sport'); drafts('sport'); autoRefresh(); if(onch) onch('sport'); return; }
+    var at=e.target.closest('[data-at]'); if(at){ var tv=at.dataset.at; setField(c,'team',tv); var ti=host.querySelector('[data-k="team"]'); if(ti) ti.value=tv; syncBadge('team'); drafts('team'); autoRefresh(); if(onch) onch('team'); return; }
+    var wd=e.target.closest('[data-wd]'); if(wd){ var nm=c.player; if(!nm||WDT[nm]==='busy') return; WDT[nm]='busy'; autoBoxes();
+      CardAuto.lookup(nm).then(function(r){ WDT[nm]='none'; if(c.player!==nm||!r) { autoBoxes(); return; } var ts=r.teams||[];
+        if(ts.length===1&&!c.team){ c.team=ts[0]; c.guess.team=1; c.why=c.why||{}; c.why.team={t:'Wikidata lists '+ts[0]+' as the current team. Check the card, it may show another.',u:CardAuto.wdUrl(r.id)}; var ti2=host.querySelector('[data-k="team"]'); if(ti2) ti2.value=c.team; if(!c.sportOk&&c.sport!==r.sport){ c.sport=r.sport; c.guess.sport=1; c.why.sport={t:'Because Wikidata lists '+nm+' as a '+r.sport.toLowerCase()+' player.',u:CardAuto.wdUrl(r.id)}; showSport(); syncBadge('sport'); } syncBadge('team'); c.upd=Date.now(); saveCard(c); drafts('x'); autoBoxes(); }
+        else if(ts.length>1){ WDT[nm]='list'; var tb=host.querySelector('[data-autoT]'); if(tb) tb.innerHTML='<div class="hint2"><span>Team might be (Wikidata):</span>'+ts.map(function(x){return '<button type="button" class="chip" data-at="'+esc(x)+'">'+esc(x)+'</button>'}).join('')+'</div><div class="why"><a href="'+esc(CardAuto.wdUrl(r.id))+'" target="_blank" rel="noopener">source ↗</a></div>'; }
+        else { if(r.sport&&!c.sportOk&&!c.guess.sport){ c.sport=r.sport; c.guess.sport=1; c.why=c.why||{}; c.why.sport={t:'Because Wikidata calls '+nm+' a '+r.sport.toLowerCase()+' player.',u:CardAuto.wdUrl(r.id)}; showSport(); syncBadge('sport'); c.upd=Date.now(); saveCard(c); drafts('x'); }
+          autoBoxes(); var tb2=host.querySelector('[data-autoT]'); if(tb2) tb2.innerHTML='<div class="why">Wikidata knows '+esc(nm)+' as a '+esc((r.sport||'').toLowerCase())+' player but lists no current team. Type the team from the card. <a href="'+esc(CardAuto.wdUrl(r.id))+'" target="_blank" rel="noopener">source ↗</a></div>'; }
+      }).catch(function(){ WDT[nm]='none'; autoBoxes(); }); return; }
+    var sb=e.target.closest('[data-sv]'); if(sb){ var box=sb.parentNode, k=box.dataset.sug, inp=host.querySelector('[data-k="'+k+'"]'); inp.value=sb.dataset.sv; setField(c,k,sb.dataset.sv); dropBadge(k); box.innerHTML=''; drafts(k); if(k==='player'||k==='brand'||k==='team') autoRefresh(); if(onch) onch(k); return; }
     var fg=e.target.closest('[data-flag]'); if(fg){ var f=fg.dataset.flag; c[f]=!c[f]; fg.classList.toggle('on',!!c[f]); if(c.guess) delete c.guess.flags; dropBadge('flags'); c.edited=true; c.upd=Date.now(); saveCard(c); drafts(f); if(onch) onch(f); return; }
     var fw=e.target.closest('[data-flaw]'); if(fw){ var w=fw.dataset.flaw, ix=c.flaws.indexOf(w); if(ix>=0) c.flaws.splice(ix,1); else c.flaws.push(w); fw.classList.toggle('on',ix<0); c.edited=true; c.upd=Date.now(); saveCard(c); drafts('flaws'); if(onch) onch('flaws'); return; }
     var rd=e.target.closest('[data-redraft]'); if(rd){ var what=rd.dataset.redraft;
@@ -582,17 +612,17 @@ function buildForm(host,c,keys,onch){
       if(c.ls[what+'Edited']) MC().askDlg('Replace what you wrote?','This swaps your edited '+(what==='title'?'title':'description')+' for a fresh draft built from the fields above.',[{label:'Re-draft it',cls:'gold',fn:doIt},{label:'Keep mine',cls:'ghost'}]); else doIt(); return; }
     var b=e.target.closest('.segb button'); if(!b) return; var sg=b.parentNode.dataset.seg;
     [].forEach.call(b.parentNode.children,function(x){x.classList.toggle('on',x===b)});
-    setField(c,sg,b.dataset.v); dropBadge(sg); derived(); drafts(sg); if(onch) onch(sg);
+    setField(c,sg,b.dataset.v); dropBadge(sg); if(sg==='sport'){ syncBadge('sport'); autoRefresh(); } derived(); drafts(sg); if(onch) onch(sg);
   };
-  derived(); drafts('init');
+  derived(); drafts('init'); autoBoxes();
 }
 function setField(c,k,v){
   if(k==='title'||k==='desc'){ c.ls[k]=v; c.ls[k+'Edited']=String(v).trim()!==''; c.edited=true; c.upd=Date.now(); saveCard(c); return; }
   if(k==='year'){ v=String(v).replace(/\D/g,'').slice(0,4); v=v===''?'':parseInt(v,10); }
   else if(k==='cost'||k==='sold'||k==='pv'||k==='price') v=num(v);
   else if(k==='tags') v=String(v).split(',').map(function(x){return x.trim()}).filter(function(x,i,a){return x&&a.indexOf(x)===i});
-  c[k]=v; c.edited=true; c.upd=Date.now(); if(k==='player') c.named=!!String(v).trim();
-  if(c.guess){ delete c.guess[GK[k]||k]; }
+  c[k]=v; c.edited=true; c.upd=Date.now(); if(k==='player') c.named=!!String(v).trim(); if(k==='sport') c.sportOk=true;
+  if(c.guess){ delete c.guess[GK[k]||k]; } if(c.why) delete c.why[k];
   if(['year','brand','parallel','team','cond','grader','sport'].indexOf(k)>=0&&v!==''){ LAST[k]=v; lsSet('mc-last',LAST); }
   saveCard(c);
 }
@@ -771,9 +801,9 @@ function startReading(){
 }
 function applyRead(c,p,ms){
   c.guess=c.guess||{}; var any=0, F=p.fields;
-  ['player','team','year','brand','number','serial','parallel'].forEach(function(k){ if(F[k]!=null&&F[k]!==''&&(c[k]===''||c[k]==null)){ c[k]=(k==='year'?+F[k]:F[k]); c.guess[k]=1; any++; } });
+  ['player','team','year','brand','number','serial','parallel'].forEach(function(k){ var v=F[k]; if(k==='player'&&v&&window.CardAuto) v=CardAuto.okName(v); if(v!=null&&v!==''&&(c[k]===''||c[k]==null)){ c[k]=(k==='year'?+v:v); c.guess[k]=1; any++; } });
   var fl=0; ['rookie','auto','relic'].forEach(function(f){ if(p.flags[f]&&!c[f]){ c[f]=true; fl++; } }); if(fl){ c.guess.flags=1; any++; }
-  c.ocrLow=p.low||{}; c.ocrTs=Date.now(); c.ocrN=any; c.upd=Date.now(); saveCard(c); log('read '+c.id+': '+any+' fields in '+ms+' ms');
+  c.ocrLow=p.low||{}; try{ if(window.CardAuto) any+=CardAuto.run(c,{low:c.ocrLow}).n; }catch(e){ log('auto: '+e.message); } c.ocrTs=Date.now(); c.ocrN=any; c.upd=Date.now(); saveCard(c); log('read '+c.id+': '+any+' fields in '+ms+' ms');
   if(N.ids[N.i]===c.id){ renderNMForm(c); renderNMHints(c); }
 }
 function updateRd(){
@@ -792,7 +822,7 @@ function updateRd(){
 function renderNMHints(c){
   var box=$('nmHints'); if(!box) return; var L=c.ocrLow||{}, h='';
   var lab={player:'Player',team:'Team',year:'Year',brand:'Set',serial:'Serial',parallel:'Parallel',surname:'Last name'};
-  Object.keys(L).forEach(function(k){ var tgt=k==='surname'?'player':k; if(c[tgt]&&k!=='surname'&&!c.guess[tgt]) return; var vals=L[k].filter(function(x){return String(x.v)!==String(c[tgt])}); if(!vals.length) return;
+  Object.keys(L).forEach(function(k){ var tgt=k==='surname'?'player':k; if(c[tgt]&&k!=='surname'&&!c.guess[tgt]) return; var vals=L[k].filter(function(x){return String(x.v)!==String(c[tgt])&&!(k==='surname'&&c.player&&c.player.toLowerCase().indexOf(String(x.v).toLowerCase())>=0)}); if(!vals.length) return;
     h+='<div class="hint2"><span>'+lab[k]+', not sure:</span>'+vals.slice(0,3).map(function(x){return '<button type="button" class="chip" data-hk="'+k+'" data-v="'+esc(x.v)+'">'+esc(x.v)+'</button>'}).join('')+'</div>'; });
   box.innerHTML=h?('<div class="hintbox"><small>Low confidence, so I left these blank. Tap one only if it is right.</small>'+h+'</div>'):'';
 }
@@ -860,8 +890,9 @@ function applyCloser(c,res){
   c.guess=c.guess||{}; var any=0; function fill(k,v){ if(v===''||v==null) return; if(c[k]===''||c[k]==null){ c[k]=(k==='year'?+v:v); c.guess[k]=1; any++; } }
   if(res.serial&&res.serial.fill) fill('serial',res.serial.fill);
   if(res.brand.fill) fill('brand',res.brand.fill);
-  if(res.nameFill) fill('player',res.nameFill);
+  if(res.nameFill){ var nf=window.CardAuto?CardAuto.okName(res.nameFill):res.nameFill; if(nf) fill('player',nf); }
   if(res.backYear&&res.backYear.n>=2) fill('year',res.backYear.year);
+  try{ if(window.CardAuto) any+=CardAuto.run(c,{low:c.ocrLow||{},names:res.names||[]}).n; }catch(e){ log('auto: '+e.message); }
   if(any){ c.ocrN=(c.ocrN||0)+any; c.ocrTs=c.ocrTs||Date.now(); c.upd=Date.now(); }
 }
 function hpChip(cls,attr,val,txt){ return '<button type="button" class="hpc '+cls+'" '+attr+'="'+esc(val)+'">'+esc(txt)+'</button>'; }
@@ -1130,7 +1161,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.1 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.2 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -1168,7 +1199,7 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.1","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.2","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
@@ -1267,7 +1298,7 @@ async function undoRestore(){
   var n=r.ids.length; B.lastRestore=null; afterBackupChange(); MC().toast('Undone. Removed the '+n+' restored card'+(n===1?'':'s')+'.',3200);
 }
 
-/* ---------- v0.10.1: bottom sheet, delete confirm, Recently deleted, duplicates ---------- */
+/* ---------- v0.10.2: bottom sheet, delete confirm, Recently deleted, duplicates ---------- */
 var SH={on:false,fn:null,refresh:null};
 function sheetOpen(html,fn){ var bx=$('shBox'), y=bx.scrollTop; bx.innerHTML=html; $('sh').hidden=false; SH.on=true; SH.fn=fn||null; document.body.classList.add('ovOpen'); bx.scrollTop=y; }
 function sheetClose(){ $('sh').hidden=true; SH.on=false; SH.fn=null; SH.refresh=null; SH.ctl=null; document.body.classList.remove('ovOpen'); }

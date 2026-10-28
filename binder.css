@@ -467,3 +467,19 @@ body.barOn #toast{bottom:calc(env(safe-area-inset-bottom) + 150px)}
 .dt{flex:1 0 calc(33.3% - 6px);min-width:100px}
 @media (min-width:640px){ .dt{flex:0 0 200px} }
 @media (min-width:640px){ .dgr{flex-wrap:wrap;overflow:visible} }
+/* v0.10.2: auto-filled fields say why, can be cleared in one tap, and ask about sport / team when unsure */
+.fld .chk.clr{margin-left:6px;background:transparent;color:var(--mut);border:1px dashed var(--walnut-line)}
+.fld .why{font-size:12.5px;line-height:1.35;color:var(--mut);margin-top:4px}
+.fld .why:empty{display:none}
+.fld .why a{color:var(--gold2);text-decoration:underline;white-space:nowrap}
+.sportAsk:empty{display:none}
+.sportAsk{margin-top:8px;padding:10px;border:2px solid var(--a);border-radius:12px;background:rgba(255,181,61,.10)}
+.sportAsk .saq{font-size:14px;margin-bottom:8px;color:var(--txt)}
+.sportAsk .sab{display:flex;gap:8px}
+.sportAsk .sab button{flex:1;min-height:54px;font-size:17px;font-weight:700;border-radius:12px;border:2px solid var(--gold);background:var(--walnut);color:var(--gold2)}
+.sportAsk .sab button:active{background:var(--gold);color:var(--ongold)}
+.autoT:empty{display:none}
+.autoT{margin-top:6px}
+.autoT .wdRow{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.autoT .wdRow small{color:var(--mut);font-size:12px}
+@media (max-width:520px){.sportAsk .sab{display:grid;grid-template-columns:1fr 1fr}.sportAsk .sab button{min-width:0;padding:0 6px}}
