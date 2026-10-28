@@ -483,3 +483,11 @@ body.barOn #toast{bottom:calc(env(safe-area-inset-bottom) + 150px)}
 .autoT .wdRow{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .autoT .wdRow small{color:var(--mut);font-size:12px}
 @media (max-width:520px){.sportAsk .sab{display:grid;grid-template-columns:1fr 1fr}.sportAsk .sab button{min-width:0;padding:0 6px}}
+/* v0.10.3: listing-sheet read results and the no-dead-end helper */
+.lsRes{margin:8px 0;line-height:1.4}
+.lsMiss{padding:12px 14px;border:1px solid rgba(212,168,75,.45);border-radius:14px;background:rgba(212,168,75,.08)}
+.lsHelp{margin:10px 0;padding:12px;border:1px solid rgba(212,168,75,.35);border-radius:14px;display:flex;flex-direction:column;gap:10px}
+.lsHelp .hpb{width:100%}
+.lsHelp .hpRow{display:flex;flex-wrap:wrap;gap:8px}
+.lsHelp input{width:100%;box-sizing:border-box;min-height:52px}
+@media (max-width:520px){.lsHelp .hpRow .hpb{flex:1 1 100%}}

@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10.2 (Mr. Moose Enterprises, LLC) - Listing sheet logic (pure functions, no network, no prices).
+/* Collectors Desk v0.10.3 (Mr. Moose Enterprises, LLC) - Listing sheet logic (pure functions, no network, no prices).
    Drafts a title and description from the card's fields. Everything here is a DRAFT for the user to review. */
 (function(){
 'use strict';

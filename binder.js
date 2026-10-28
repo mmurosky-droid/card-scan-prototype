@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10.2 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.10.3 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -817,7 +817,7 @@ function updateRd(){
   else h='';
   el.className=(rd.pending>0||rd.cur||rd.msg)&&!rd.fail?'busy':''; el.innerHTML=h+((rd.pending>0||rd.cur)&&!rd.fail?'<i><u style="width:'+Math.round(100*read/Math.max(1,t))+'%"></u></i>':'');
   el.style.display=h?'block':'none';
-  var st=$('nmCardSt'); if(st&&c){ var s=''; if(c.ocrTs) s=c.ocrN?('✨ Read from the photo: '+c.ocrN+' field'+(c.ocrN===1?'':'s')+' filled. Please check them.'):'I could not read anything sure on this card. That is normal. Type what you see.'; else if(c.ocrFail) s='I could not read this one. Type what you see.'; else if(c.edited&&!c.ocrTs) s=''; else if(!rd.fail&&(rd.cur===c.id)) s='Reading this card…'; else if(!rd.fail&&rd.pending>0) s='Waiting in line to be read…'; st.textContent=s; }
+  var st=$('nmCardSt'); if(st&&c){ var s=''; if(c.ocrTs) s=c.ocrN?('✨ Read from the photo: '+c.ocrN+' field'+(c.ocrN===1?'':'s')+' filled. Please check them.'):'I couldn’t read this one automatically. Draw a box over the name, or type it and I’ll help.'; else if(c.ocrFail) s='I couldn’t read this one automatically. Draw a box over the name, or type it and I’ll help.'; else if(c.edited&&!c.ocrTs) s=''; else if(!rd.fail&&(rd.cur===c.id)) s='Reading this card…'; else if(!rd.fail&&rd.pending>0) s='Waiting in line to be read…'; st.textContent=s; }
 }
 function renderNMHints(c){
   var box=$('nmHints'); if(!box) return; var L=c.ocrLow||{}, h='';
@@ -1003,7 +1003,7 @@ var BX={c:null,side:'front',kind:'name',box:null,busy:false,tok:0};
 function openBox(c){ BX.c=c; BX.side=(N.side==='back'&&c.back)?'back':'front'; BX.box=null; BX.kind=BX.kind||'name'; $('bxImg').src=urlOf(BX.side==='back'?c.back:(c.front||c.back)); $('bxRect').style.display='none'; $('bxRes').innerHTML='<div class="pvnote">Drag a box around the printed name, serial number or set name. I will read just that part, bigger and several ways.</div>';
   $('bxFlip').style.display=(c.front&&c.back)?'':'none'; bxKindUI(); $('bxOv').hidden=false; document.body.classList.add('ovOpen'); }
 function bxKindUI(){ [].forEach.call($('bxKind').children,function(b){ b.classList.toggle('on',b.dataset.kind===BX.kind); }); }
-function closeBox(){ BX.tok++; $('bxOv').hidden=true; if($('kpOv').hidden) document.body.classList.remove('ovOpen'); renderNMForm(BX.c); }
+function closeBox(){ if(!BX.c) return; BX.tok++; $('bxOv').hidden=true; if($('kpOv').hidden) document.body.classList.remove('ovOpen'); if(BX.from==='ls'){ BX.from=null; var lc=byId(BX.c.id)||BX.c; try{ if(window.CardAuto) CardAuto.run(lc,{},{noRead:true}); }catch(e){} saveCard(lc); renderLS(); showOcr(lc,LS_O||{players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[]}); return; } renderNMForm(BX.c); }
 (function(){
   var st=$('bxStage'), rect=$('bxRect'), p0=null;
   function pos(e){ var r=$('bxImg').getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)),r:r}; }
@@ -1050,16 +1050,38 @@ $('bxOv').addEventListener('click',function(e){
   if(t.dataset.bx==='nn'){ c.noSerial=true; saveCard(c); closeBox(); return; }
 });
 
-/* Reader for the listing sheet: same bundled reader, result turned into the "might be" lists that sheet shows */
-async function ocrCard(c,outId){
-  if(!window.CardOCR||!window.CardParse) throw new Error('the reader files are missing');
-  var out=$(outId||'lsOcr'); if(out&&!CardOCR.state.ready) out.innerHTML='<small>Getting the reader ready (about 7 MB, once)…</small>';
-  var r=await CardOCR.readWords(c.front||c.back,{}), p=CardParse.parse(r.words,c.sport||'Baseball'), o={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[]};
-  function add(a,k){ if(p.fields[k]!=null&&p.fields[k]!=='') a.push(p.fields[k]); (p.low[k]||[]).forEach(function(x){ if(a.indexOf(x.v)<0) a.push(x.v); }); }
-  add(o.players,'player'); (p.low.surname||[]).forEach(function(x){ o.players.push(x.v); }); add(o.years,'year'); add(o.teams,'team'); add(o.serials,'serial'); add(o.numbers,'number'); add(o.brands,'brand');
-  ['rookie','auto','relic'].forEach(function(f){ if(p.flags[f]) o.flags.push(f); });
+/* Reader for the listing sheet (v0.10.3): the same full reader the Name screen uses, through AppReader (reader-adapter.js).
+   Whatever it finds is filled in as "check this" (strong, single answers) or offered as chips (weaker ones). */
+var LS_AB=null;
+function candList(f,k,min){ return ((f[k]&&f[k].candidates)||[]).filter(function(x){ return x.confidence>=(min||0); }).sort(function(a,b){ return b.confidence-a.confidence; }).map(function(x){ return x.value; }); }
+function readLow(r){
+  if(r.legacy&&r.legacy.low&&r.legacy.parsed) return r.legacy.low;
+  var f=r.fields, low={}, mk=function(k){ return ((f[k]&&f[k].candidates)||[]).map(function(x){ return {v:x.value,c:Math.round(x.confidence*100)}; }); };
+  ['team','year','brand','number','serial'].forEach(function(k){ var a=mk(k); if(a.length) low[k]=a; });
+  var pl=mk('player'); pl.forEach(function(x){ var tgt=/\s/.test(String(x.v).trim())?'player':'surname'; (low[tgt]=low[tgt]||[]).push(x); }); return low;
+}
+function applyFields(c,r){
+  c.guess=c.guess||{}; var f=r.fields, n=0, got=[]; c.noAuto=c.noAuto||{};
+  function take(k,v){ if(v===''||v==null) return; if((c[k]===''||c[k]==null)&&!c.noAuto[k]){ c[k]=(k==='year'?+v:v); c.guess[k]=1; n++; got.push(k); } }
+  ['player','team','year','brand','number','serial'].forEach(function(k){ var x=f[k]; if(!x||x.value===''||x.value==null||(x.confidence||0)<.6) return; var v=x.value; if(k==='player'&&window.CardAuto) v=CardAuto.okName(v); take(k,v); });
+  ['auto','rookie'].forEach(function(k){ if(f[k]&&f[k].value&&(f[k].confidence||0)>=.6&&!c[k]){ c[k]=true; c.guess.flags=1; n++; got.push(k); } });
+  var low=readLow(r); c.ocrLow=low;
+  try{ if(window.CardAuto){ var ra=CardAuto.run(c,{low:low,names:(r.legacy&&r.legacy.names)||[]}); n+=ra.n; ra.fields.forEach(function(k){ if(got.indexOf(k)<0) got.push(k); }); } }catch(e){ log('auto: '+e.message); }
+  c.ocrTs=Date.now(); c.ocrN=(c.ocrN||0)+n; if(n){ c.upd=Date.now(); } saveCard(c); return got;
+}
+async function readFull(c,outId){
+  if(!window.AppReader) throw new Error('the reader files are missing');
+  var out=$(outId||'lsOcr'); if(out&&window.CardOCR&&!CardOCR.state.ready) out.innerHTML='<small>Getting the reader ready (about 7 MB, once)…</small>';
+  if(LS_AB){ try{ LS_AB.abort(); }catch(e){} } LS_AB=window.AbortController?new AbortController():null;
+  var r=await AppReader.read(c.front||c.back,{backImage:c.back||null,sport:c.sport||'Baseball',signal:LS_AB&&LS_AB.signal,onProgress:function(m){ var e=$(outId||'lsOcr'); if(e&&!e.querySelector('.lsHelp')) e.innerHTML='<small>'+esc(m)+' Your photo stays on this phone.</small>'; }});
+  if(r.aborted) return null;
+  var got=applyFields(c,r), f=r.fields, o={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:got};
+  o.players=candList(f,'player',.15).filter(function(v){ return /^[A-Za-z][A-Za-z .'\-]{3,}$/.test(String(v)); }).slice(0,5);
+  o.years=candList(f,'year',.2).slice(0,4); o.teams=candList(f,'team',.2).slice(0,4); o.serials=candList(f,'serial',.15).slice(0,4); o.numbers=candList(f,'number',.2).slice(0,4); o.brands=candList(f,'brand',.15).slice(0,4);
+  ['rookie','auto','relic'].forEach(function(k){ if(f[k]&&f[k].value) o.flags.push(k); });
   return o;
 }
+var FLD_NAME={player:'player',team:'team',year:'year',brand:'set',number:'card number',serial:'serial number',sport:'sport',auto:'autograph',rookie:'rookie'};
 
 /* ---------- Clean up all photos (binder view) ---------- */
 function cleanTodo(list){ var t=[]; list.forEach(function(c){ ['front','back'].forEach(function(sd){ if(c[sd]&&!cleanOf(c,sd)) t.push({c:c,s:sd}); }); }); return t; }
@@ -1117,10 +1139,24 @@ $('lsTop').addEventListener('click',async function(e){
     if(k==='grader'||k==='grade'||k==='cert'){ c.cond='graded'; saveCard(c); }
     renderLS(); showOcr(c,LS_O); return; }
   if(e.target.closest('#lsRead')){ var btn=$('lsRead'); if(btn.disabled) return; btn.disabled=true; var out=$('lsOcr'); out.innerHTML='<small>Reading this card on your phone… your photo is not uploaded.</small>';
-    try{ LS_O=await ocrCard(c,'lsOcr'); showOcr(c,LS_O); log('ls ocr ok'); }
-    catch(er){ out.innerHTML='Auto-read did not work here ('+esc(er&&er.message||'unknown')+'). It needs an internet connection the first time. You can type everything yourself instead.'; log('ls ocr fail: '+(er&&er.message||er)); }
-    btn.disabled=false; }
+    try{ var o=await readFull(c,'lsOcr'); if(o){ LS_O=o; renderLS(); showOcr(byId(L.id)||c,LS_O); log('ls ocr ok '+o.got.join(',')); } }
+    catch(er){ log('ls ocr fail: '+(er&&er.message||er)); LS_O={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[],failed:true}; renderLS(); showOcr(byId(L.id)||c,LS_O); }
+    var b2=$('lsRead'); if(b2) b2.disabled=false; return; }
+  var ls=e.target.closest('[data-ls]'); if(ls){ lsHelp(c,ls); return; }
 });
+$('lsTop').addEventListener('input',function(e){ if(e.target.id!=='lsNm') return; var sg=$('lsNmSug'); if(!sg||!window.AppReader) return; var q=e.target.value; var L2=AppReader.suggestNames(q,6);
+  sg.innerHTML=L2.length?L2.map(function(x){ return '<button type="button" class="hpc big" data-ls="pick" data-v="'+esc(x.name)+'">'+esc(x.name)+'</button>'; }).join('')+'<div class="why">'+esc(L2[0].why)+'</div>':(q.trim().length>=3?'<div class="why">No match in the list. You can still use what you typed.</div>':''); });
+function lsAfterName(c){ try{ if(window.CardAuto) CardAuto.run(c,{},{noRead:true}); }catch(e){} saveCard(c); renderLS(); showOcr(byId(L.id)||c,LS_O||{players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[]}); }
+function lsHelp(c,el){
+  var act=el.dataset.ls, inp=$('lsNm'), typed=((inp&&inp.value)||'').trim();
+  if(act==='box'){ BX.from='ls'; BX.kind='name'; N.side='front'; openBox(c); return; }
+  if(act==='pick'){ var v=el.dataset.v; setField(c,'player',v); if(c.guess) delete c.guess.player; c.edited=true; lsAfterName(c); return; }
+  if(act==='use'||act==='wd'){ if(typed.length<2){ MC().toast('Type the name first.'); return; }
+    if(typed!==c.player){ setField(c,'player',typed); if(c.guess) delete c.guess.player; c.edited=true; }
+    if(act==='use'){ lsAfterName(c); return; }
+    if(navigator.onLine===false){ lsAfterName(c); MC().toast('The lookup needs an internet connection. The name was saved.',3200); return; }
+    lsAfterName(c); setTimeout(function(){ var w=document.querySelector('#lsForm [data-wd]'); if(w) w.click(); else MC().toast('Name saved. Team chips are shown below the player box.',2600); },200); }
+}
 var LS_O=null;
 function showOcr(c,o){
   var out=$('lsOcr'); if(!out||!o) return; var h='', any=false;
@@ -1129,7 +1165,18 @@ function showOcr(c,o){
   grp('Card number might be:','number',o.numbers,c.number); grp('Serial / print run might be:','serial',o.serials,c.serial);
   var fl=o.flags.filter(function(f){return !c[f]}); if(fl.length){ any=true; h+='<div>Features might be:<div class="sg">'+fl.map(function(f){return '<button type="button" data-oc="flag:'+f+'" data-v="1" class="chip">'+({rookie:'Rookie',auto:'Autograph',relic:'Patch / relic'})[f]+'</button>'}).join('')+'</div></div>'; }
   grp('Grader might be:','grader',o.graders,c.grader); grp('Grade might be:','grade',o.grades,c.grade); grp('Cert number might be:','cert',o.certs,c.cert);
-  out.innerHTML=(any?'<b>Suggestions only. Please check them.</b> Tap one to use it. It will be marked “check this” until you confirm it.'+h:'I could not read anything useful on this one. That is normal for some cards. Please type the details.')+'<br><small>Auto-read is a helper, not a guarantee. It is often wrong on fancy fonts and shiny cards.</small>';
+  var got=(o.got||[]).filter(function(k,ix,a){ return a.indexOf(k)===ix&&FLD_NAME[k]; }), msg='';
+  if(got.length) msg='<div class="lsRes"><b>✨ I filled in '+got.map(function(k){ return FLD_NAME[k]; }).join(', ')+' from the photo.</b> They say “check this” until you confirm them. Fix or clear anything that is wrong.</div>';
+  if(any) msg+='<div class="lsRes">'+(got.length?'<b>Other things I might have seen.</b> ':'<b>Suggestions only. Please check them.</b> ')+'Tap one to use it. It will be marked “check this” until you confirm it.</div>'+h;
+  if(!got.length&&!any&&c.player) msg='<div class="lsRes"><b>Thanks, the name is in.</b> I could not read the other details from the photo, so please check them below.</div>';
+  else if(!got.length&&!any) msg='<div class="lsRes lsMiss"><b>I couldn’t read this one automatically.</b> Draw a box over the name, or type it and I’ll help.</div>';
+  var need=!c.player||!/\s/.test(String(c.player).trim());
+  if(need){ var cur=c.player||''; msg+='<div class="lsHelp"><button type="button" class="hpb gold" data-ls="box">✏️ Draw a box on the photo to read it</button>'+
+    '<div class="fld"><label for="lsNm">Or type the player’s name</label><input id="lsNm" type="text" autocomplete="off" autocapitalize="words" placeholder="First and last name" value="'+esc(cur)+'"></div><div id="lsNmSug" class="hpRow"></div>'+
+    '<div class="hpRow"><button type="button" class="hpb" data-ls="use">Use this name</button><button type="button" class="hpb" data-ls="wd">🌐 Look up this name online</button></div>'+
+    '<small>The lookup is optional and only sends the name text to wikidata.org. No photos, nothing else.</small></div>'; }
+  if(!need) msg+='<div class="lsHelp"><button type="button" class="hpb" data-ls="box">✏️ Draw a box to read a name, serial or set</button></div>';
+  out.innerHTML=msg+'<small>Auto-read is a helper, not a guarantee. It is often wrong on fancy fonts and shiny cards.</small>'; if(need&&c.player){ var ip=$('lsNm'); if(ip) ip.dispatchEvent(new Event('input',{bubbles:true})); }
 }
 $('lsAct').addEventListener('click',function(e){
   var c=byId(L.id); if(!c) return;
@@ -1161,7 +1208,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.2 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.3 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -1199,7 +1246,7 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.2","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.3","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
