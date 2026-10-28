@@ -61,6 +61,20 @@ Backs matter. The year and set are printed there.
 
 Home lists **Your scans**. Tap one to open its cards again anytime.
 
+## Your Binder (new in v0.7)
+
+After every scan your cards land in your **Binder**, on the first tab of Home. Everything is stored on this phone only. Nothing is uploaded.
+
+- **All cards** holds every card. Make your own binders (**＋ New binder**) for a team, a set, or shop stock. One card can sit in many binders. An **Inventory** binder also shows cost paid, placeholder value, listed and sold counts, and profit.
+- **Name your cards:** tap it after a scan (or from Home). One big photo, type the player, and the team, year and set are suggested as you type. Tap **Next**, or **Skip**. **Try auto-read names** is optional and only gives suggestions, so check them.
+- **Sort** by Date added, Player, Team, Year, or Value (placeholder). Tap a card to open it: flip front and back, edit every field, add notes, add **your own photos**, mark Owned, Listed or Sold, and see profit when sold.
+- **Select** lets you pick many cards and add or move them to a binder.
+- **Placeholder value** is just a number you type. It is not a price and it is never looked up.
+- **Backup tab:** export JSON (full backup with photos), CSV (spreadsheet, eBay-style columns, not an official eBay upload file), or photos zip. **Import** restores a JSON backup without overwriting what you have.
+- **Warning:** clearing your browser or site data deletes your Binder. Export now and then.
+- **Capture now:** the big button on the camera screen takes the card in the frame right now, whether or not the app is tracking. If tracking gets stuck, the app switches to a timed backup (hold about 1½ seconds per card). You can also pick **Pause** before you start.
+- **Info** (top of the camera screen, or Backup tab): a small log and numbers. Take a screenshot of it if something feels off.
+
 ## Good to know
 
 - **Slow is fast.** A slow scan means fewer redos.
@@ -110,3 +124,8 @@ You're doing great. Every card you scan is one less to wonder about.
 - v0.4: sweep tracking picks the best frame per card.
 - v0.5: instant Saving screen, "Your cards" results with a What next? panel, real Home with Your scans and Start a scan, Home button on every screen (Save first), still photos kept in IndexedDB (never the video), Save to my phone uses the share sheet when available and stays put. Stricter card changes (net sweep distance, hysteresis, image similarity merge). Duplicate flags, Merge with previous, Remove duplicate, editable count. Backup: `index.html.bak-v0.4`.
 - v0.5.1: flip-through Review screen (large front/back, next/prev or swipe, Sell/Keep/Grade labels kept on the phone and added to the zip as cards.csv), Send screen (Share with files, Email to myself, Send to my collection coming soon). Backup: `index.html.bak-v0.5`.
+- v0.7: Binder (IndexedDB, local only): Binders home tab, All cards plus custom and inventory binders, card detail with notes, own photos, status, cost and sold profit, Name your cards quick entry (optional on-device auto-read), export JSON/CSV/zip and JSON import, storage.persist(). Scan: always-visible Capture now button, timed-capture fallback when tracking looks stuck, Pause picking mode, Info/debug panel. Earlier scans move into the Binder automatically. Split into index.html, binder.js, binder.css. Backup: `index.html.bak-v0.6`.
+
+## One-line test script (v0.7)
+
+> Open the page, tap Scan tab then Start a scan, sweep a few cards, tap Name your cards and name two (Skip one), open All cards and change Sort to Team, tap a card, add a note and one of your own photos, make a binder from the card screen, then Backup tab then Export my Binder.

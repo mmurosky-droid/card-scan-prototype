@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0a08">
-<title>Guided Scan · prototype v0.6</title>
+<title>Guided Scan · v0.7</title>
 <style>
 :root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0b0a08;--panel:rgba(18,16,12,.80);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -222,32 +222,39 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #slvChip.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1a1405;font-weight:700}
 #hud .row .chip{padding:9px 10px}
 </style>
+<link rel="stylesheet" href="binder.css?v=0.7">
 </head>
 <body>
 
 <section id="home" class="screen on">
   <div id="homeScroll">
-    <div class="crest">Moose Cards · v0.6</div>
+    <div class="crest">Moose Cards · v0.7</div>
     <h1>Guided Scan</h1>
     <p class="sub">Scan your cards fast. Everything stays on your phone.</p>
     <div id="homeWarn"></div>
-    <button class="gold-btn" id="startScan">Start a scan</button>
-    <div class="lab">Your scans</div>
-    <div id="sessList"></div>
-    <div class="lab">How it works</div>
-    <ol class="steps">
-      <li><span>Lay two rows of cards face up in soft light. Tap <b>Start a scan</b>.</span></li>
-      <li><span>Glide your phone slowly along each row. Up to 30 cards per scan. I pick out each card for you.</span></li>
-      <li><span>Check your cards, scan the backs, then save everything to your phone.</span></li>
-    </ol>
-    <div style="text-align:center;margin-top:10px"><button class="linkb" id="clearAll">Clear all scans from this phone</button></div>
-    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:2px">Guided Scan v0.6 · Moose Cards</div>
+    <div id="paneB" class="pane on"></div>
+    <div id="paneS" class="pane">
+      <button class="gold-btn" id="startScan">Start a scan</button>
+      <div class="lab">Your scans</div>
+      <div id="sessList"></div>
+      <div class="lab">How it works</div>
+      <ol class="steps">
+        <li><span>Lay two rows of cards face up in soft light. Tap <b>Start a scan</b>.</span></li>
+        <li><span>Glide your phone slowly along each row. Up to 30 cards per scan. I pick out each card for you.</span></li>
+        <li><span>Your cards land in your <b>Binder</b>. Name them, sort them, and keep notes.</span></li>
+      </ol>
+      <div style="text-align:center;margin-top:10px"><button class="linkb" id="clearAll">Clear all scans from this phone</button></div>
+      <div class="pvnote" style="text-align:center">Clearing scans does not touch your Binder. Your Binder keeps its own copies.</div>
+    </div>
+    <div id="paneD" class="pane"></div>
+    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:6px">Guided Scan v0.7 · Moose Cards</div>
   </div>
+  <nav id="tabs"><button data-t="b" class="on"><b>📚</b>Binders</button><button data-t="s"><b>📷</b>Scan</button><button data-t="d"><b>💾</b>Backup</button></nav>
 </section>
 
 <section id="pre" class="screen">
-  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.6</span></div>
-  <div class="crest">Moose Cards · prototype v0.6</div>
+  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.7</span></div>
+  <div class="crest">Moose Cards · prototype v0.7</div>
   <h1>Get ready</h1>
   <p class="sub">Glide your phone slowly along a row of cards. I record the video and pick the best photo of each card for you. Everything stays on your phone.</p>
 
@@ -261,6 +268,12 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div class="seg" id="slvSeg">
     <button data-v="on" class="on">Sleeved / top-loader<small>Keep them protected</small></button>
     <button data-v="off">Out of sleeves<small>Bare cards</small></button>
+  </div>
+
+  <div class="lab">How should I pick the cards?</div>
+  <div class="seg" id="pickSeg">
+    <button data-v="auto" class="on">Glide<small>Smart, with a timed backup</small></button>
+    <button data-v="timed">Pause<small>Hold about 1½ s per card</small></button>
   </div>
 
   <div class="lab">After the fronts</div>
@@ -279,7 +292,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <button class="gold-btn" id="go">Start camera</button>
   <div id="err" role="alert"></div>
   <div class="priv">Nothing is uploaded. Photos are kept on this phone until you delete them.</div>
-  <footer>Guided Scan v0.6 · Moose Cards</footer>
+  <footer>Guided Scan v0.7 · Moose Cards</footer>
 </section>
 
 <section id="cam" class="screen">
@@ -295,7 +308,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
       <button class="chip on" id="slvChip">Sleeve</button>
       <button class="chip" id="dbgChip">Info</button>
     </div>
-    <div id="cnt2"><div id="found">Cards found: <b>0</b> of 30</div><div id="tm"></div></div>
+    <div id="cnt2"><div id="found">Cards found: <b>0</b> of 30</div><div class="rt2"><div id="tm"></div><button class="chip" id="review">Review</button></div></div>
     <div id="qbar"><i></i></div>
   </div>
   <div id="coach">Starting camera…</div>
@@ -304,15 +317,15 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
     <button class="gold-btn" id="nextpass" style="display:none">Done with fronts → scan backs</button>
     <div class="ctrls">
       <button class="ghost-btn" id="undo">↶ Undo</button>
+      <button class="gold-btn" id="capNow">📸 Capture now</button>
       <button class="gold-btn" id="prim">Start sweep</button>
-      <button class="ghost-btn" id="review">Review</button>
     </div>
   </div>
   <div class="modal" id="mod"><h2 id="modT"></h2><p id="modP"></p><div class="mbtns" id="modB"></div></div>
 </section>
 
 <section id="sav" class="screen">
-  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.6</span></div>
+  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.7</span></div>
   <div class="box">
     <div class="spin" aria-hidden="true"></div>
     <h2>Saving your scan…</h2>
@@ -323,7 +336,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="rev" class="screen">
-  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.6</span></div>
+  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.7</span></div>
   <div id="revScroll">
     <h1>Your cards</h1>
     <div id="sum"></div>
@@ -338,7 +351,9 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
     <div id="grid"></div>
     <div id="next">
       <h2>What next?</h2>
-      <button class="gold-btn" id="nxFlip">Review each card<small>Flip through big. Mark Sell, Keep or Grade</small></button>
+      <button class="gold-btn" id="nxName">Name your cards<small>Quick, one at a time. You can skip any card.</small></button>
+      <button class="ghost-btn" id="nxBinder">Open my Binder<small>Your cards are already in it</small></button>
+      <button class="ghost-btn" id="nxFlip">Review each card<small>Flip through big. Mark Sell, Keep or Grade</small></button>
       <button class="ghost-btn" id="nxSend">Send or share<small>Share, email yourself, or save</small></button>
       <button class="gold-btn" id="nxBacks">Scan the backs<small>Same order as the fronts</small></button>
       <button class="ghost-btn" id="nxSec">Scan another section<small>Start a fresh scan, up to 30 more cards</small></button>
@@ -355,7 +370,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div class="modal" id="viewer"><h2 id="vT"></h2><p class="vh" id="vH"></p><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
 </section>
 <section id="flip" class="screen">
-  <div class="hdr"><button class="chip homeb" id="flipHome">⌂ Home</button><span class="hv">Section <span id="flipSec">1</span> · v0.6</span></div>
+  <div class="hdr"><button class="chip homeb" id="flipHome">⌂ Home</button><span class="hv">Section <span id="flipSec">1</span> · v0.7</span></div>
   <div id="flipBody">
     <div id="flipTop"><h1 id="flipN">Card 1 of 1</h1>
       <div id="flipSide"><button id="fsF" class="on">Front</button><button id="fsB">Back</button></div></div>
@@ -373,7 +388,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="send" class="screen">
-  <div class="hdr"><button class="chip homeb" id="sendHome">⌂ Home</button><span class="hv">Section <span id="sendSec">1</span> · v0.6</span></div>
+  <div class="hdr"><button class="chip homeb" id="sendHome">⌂ Home</button><span class="hv">Section <span id="sendSec">1</span> · v0.7</span></div>
   <div id="sendBody">
     <h1>Send</h1>
     <div id="sendSum"></div>
@@ -385,8 +400,62 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   </div>
 </section>
 
+
+<section id="bv" class="screen">
+  <div class="hdr"><button class="chip homeb2" id="bvBack">‹ Binders</button><span class="hv">v0.7</span></div>
+  <div id="bvBody">
+    <div id="bvTitleRow"><h1 id="bvTitle">All cards</h1><button class="chip" id="bvMenu" style="display:none">⋯ Manage</button></div>
+    <div id="bvSub"></div>
+    <div id="bvTot"></div>
+    <div id="bvCtl"><select id="bvSort" aria-label="Sort"></select><input id="bvSearch" type="search" placeholder="Search" aria-label="Search"><button class="chip" id="bvSel">Select</button></div>
+    <button class="ghost-btn" id="bvAdd" style="display:none;width:100%;margin-bottom:8px">＋ Add cards from All cards</button>
+    <div id="bvGrid"></div>
+    <p class="pvnote" id="bvNote"></p>
+  </div>
+  <div id="bvBar"></div>
+</section>
+
+<section id="cd" class="screen">
+  <div class="hdr"><button class="chip" id="cdBack">‹ Back</button><span class="hv">v0.7</span></div>
+  <div id="cdBody">
+    <div id="cdTop"><button class="chip" id="cdPrev" aria-label="Previous card">‹</button><h1 id="cdN">Card</h1><button class="chip" id="cdNext" aria-label="Next card">›</button></div>
+    <div class="phwrap"><img id="cdImg" alt="Card photo"><span class="fl" id="cdFl"></span><button class="rm" id="cdRm">Remove photo</button></div>
+    <div class="phstrip" id="cdStrip"></div>
+    <div class="savd" id="cdSaved"></div>
+    <div class="frm" id="cdForm"></div>
+    <div class="sect">Binders</div>
+    <div class="bchk" id="cdBinders"></div>
+    <button class="ghost-btn" id="cdMove" style="width:100%;margin-top:10px">Move to another binder…</button>
+    <p class="pvnote" id="cdMeta"></p>
+    <button class="dang" id="cdDel">Delete this card</button>
+    <input type="file" id="cdFile" accept="image/*" multiple style="display:none">
+    <input type="file" id="cdCam" accept="image/*" capture="environment" style="display:none">
+  </div>
+</section>
+
+<section id="nm" class="screen">
+  <div class="hdr"><button class="chip" id="nmBack">‹ Skip all, my Binder</button><span class="hv">v0.7</span></div>
+  <div id="nmBody">
+    <div id="nmTop"><h1 id="nmN">Card 1</h1></div>
+    <div id="nmProg"><i></i></div>
+    <div class="phwrap" id="nmPh"><img id="nmImg" alt="Card photo"><span class="fl" id="nmFl"></span></div>
+    <div class="pvnote" id="nmPre"></div>
+    <div id="nmTeamLast"></div>
+    <div class="frm" id="nmForm"></div>
+    <button class="ghost-btn" id="nmOcr" style="width:100%">✨ Try auto-read names<small style="display:block;font-size:12px;opacity:.8">Optional. Reads on your phone. Suggestions only.</small></button>
+    <div id="nmOcrOut"></div>
+    <div id="nmAct"><button class="ghost-btn" id="nmPrev">‹ Back</button><button class="ghost-btn" id="nmSkip">Skip</button><button class="gold-btn" id="nmNext">Next ›</button></div>
+  </div>
+</section>
+
+<div id="pr"><h2 id="prT"></h2><input id="prIn" class="in" type="text" autocomplete="off"><div class="segb in" id="prType" style="display:none"><button data-v="collection">Collection</button><button data-v="inventory">Inventory</button></div><p id="prNote" style="margin:0;color:var(--mut);font-size:14px;line-height:1.4;max-width:330px"></p><div class="mbtns"><button class="gold-btn" id="prOk">Save</button><button class="ghost-btn" id="prNo">Cancel</button></div></div>
+
+<div id="info"><h2>Info · v0.7</h2><pre id="infoTxt"></pre>
+  <div class="r"><button class="ghost-btn" id="infoCopy">Copy</button><button class="ghost-btn" id="infoLive">Live numbers</button><button class="ghost-btn" id="infoTimed">Timed mode: off</button></div>
+  <div class="r"><button class="ghost-btn" id="infoClear">Clear log</button><button class="gold-btn" id="infoClose">Close</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="dlg"><h2 id="dlgT"></h2><p id="dlgP"></p><div class="mbtns" id="dlgB"></div></div>
+<script src="binder.js?v=0.7"></script>
 <script>
 (function(){
 'use strict';
@@ -396,7 +465,8 @@ var HYST=0.12;                    // extra slide (in pitches) needed before a ne
 var DUP_AUTO=9, DUP_FLAG=18;      // similarity: merge on the spot / flag as "looks like a duplicate"
 var S={mode:'graded',sleeve:true,bgDark:false,bgM:null,bgN:0,flow:'passes',phase:'fronts',state:'ready',fronts:[],backs:[],videos:[],sec:{fronts:0,backs:0},
   cur:null,sessions:[],nextNum:1,db:null,revNote:'',saveBusy:false,busy:false,
-  stream:null,tk:0,dbg:false,m:null,wake:null,looping:false,manual:null,pend:0,toast:null,seg:null,prevSeg:null,T:null,t0:0,mime:null,rec:null,recChunks:[],recWait:null,hold:0,lvl:'idle',okRun:0};
+  stream:null,tk:0,dbg:false,m:null,wake:null,looping:false,manual:null,pend:0,toast:null,seg:null,prevSeg:null,T:null,t0:0,mime:null,rec:null,recChunks:[],recWait:null,hold:0,lvl:'idle',okRun:0,
+  pick:'auto',stuck:false,weakAvg:0,prevG:null,steady:0,lastSegT:0,st:null};
 var RATIO={graded:0.52,raw:0.70};        // looser than a real slab (.54) / card (.71)
 var WFRAC={graded:0.80,raw:0.88};
 var AW=128, ac=document.createElement('canvas'), actx=ac.getContext('2d',{willReadFrequently:true});
@@ -406,6 +476,46 @@ var rect={x:0,y:0,w:100,h:100};
 var CAN_REC=!!(window.MediaRecorder);
 if(!CAN_REC) $('recNote').style.display='flex';
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+/* ---------- v0.7: tiny log + Info panel (for screenshots) ---------- */
+var LOG=[], T0=Date.now(), VERSION='v0.7';
+try{ var _o=JSON.parse(localStorage.getItem('mc-log')||'[]'); if(_o&&_o.length){ LOG=_o.slice(-40); LOG.push('--- page reloaded ---'); } }catch(e){}
+function log(m){
+  var t=((Date.now()-T0)/1000).toFixed(1); LOG.push(t+'s '+m); if(LOG.length>300) LOG.splice(0,LOG.length-300);
+}
+function saveLog(){ try{ localStorage.setItem('mc-log',JSON.stringify(LOG.slice(-120))); }catch(e){} }
+window.addEventListener('error',function(e){ log('ERROR '+(e&&e.message)+' @'+(e&&e.lineno)); saveLog(); });
+window.addEventListener('unhandledrejection',function(e){ log('REJECT '+((e&&e.reason&&e.reason.message)||e.reason)); });
+function newStat(){ return {auto:0,timed:0,now:0,manual:0,merged:0,missed:0,g:0,y:0,r:0,ticks:0,weak:0,lost:0,stuckAt:null,t0:performance.now(),fpsN:0,fpsT:performance.now(),fps:0}; }
+S.st=newStat();
+function infoText(){
+  var st=S.st||newStat(), t=S.stream&&S.stream.getVideoTracks()[0], set=t&&t.getSettings?t.getSettings():{}, T=S.T||{}, s=S.cur, nt=Math.max(1,st.ticks);
+  var l=[];
+  l.push('Guided Scan '+VERSION+'  '+new Date().toLocaleString());
+  l.push('screen '+innerWidth+'x'+innerHeight+' dpr '+(window.devicePixelRatio||1)+' secure '+window.isSecureContext);
+  l.push('UA '+navigator.userAgent.slice(0,110));
+  l.push('camera '+(set.width?set.width+'x'+set.height+' @'+(set.frameRate?Math.round(set.frameRate):'?')+'fps':'not running')+' video '+(vid.videoWidth||0)+'x'+(vid.videoHeight||0));
+  l.push('record '+(CAN_REC?'yes ('+(S.rec&&S.rec.mimeType||pickMime()||'default')+')':'no'));
+  l.push('state '+S.state+' phase '+S.phase+' mode '+S.mode+' sleeve '+S.sleeve+' pick '+S.pick+(S.stuck?' [TIMED BACKUP ON]':''));
+  l.push('cards this scan: fronts '+count(S.fronts)+'/'+S.fronts.length+' backs '+count(S.backs)+'/'+S.backs.length);
+  l.push('captures: auto '+st.auto+' timed '+st.timed+' now-button '+st.now+' manual '+st.manual+' merged '+st.merged+' missed '+st.missed);
+  l.push('frames: green '+Math.round(100*st.g/nt)+'% yellow '+Math.round(100*st.y/nt)+'% red '+Math.round(100*st.r/nt)+'% (n='+st.ticks+')');
+  l.push('tracking: weak '+Math.round(100*st.weak/nt)+'% lost '+Math.round(100*st.lost/nt)+'% stuck-at '+(st.stuckAt===null?'never':st.stuckAt.toFixed(1)+'s'));
+  l.push('speed '+(T.vel!==undefined?T.vel.toFixed(2):'?')+' w/s  fps '+st.fps+'  bg '+(S.bgM===null?'?':S.bgM.toFixed(0))+(S.bgDark?' dark':''));
+  if(S.m) l.push('last frame: sharp '+S.m.sharp.toFixed(0)+' glareC '+(S.m.glareC*100).toFixed(0)+'% shadowC '+(S.m.shadowC*100).toFixed(0)+'% light '+S.m.bright.toFixed(0));
+  l.push((window.Binder?Binder.debugInfo():'binder: not loaded')+'  scans '+S.sessions.length);
+  l.push('storage db: scans '+(S.db?'ok':'none')+' persist-asked '+(localStorage.getItem('mc-persist-asked')||'no'));
+  l.push('---- log (newest last) ----');
+  return l.join('\n')+'\n'+LOG.slice(-70).join('\n');
+}
+var infoT=null;
+function openInfo(){ $('info').classList.add('on'); $('infoTimed').textContent='Timed mode: '+(S.pick==='timed'?'on':'off'); $('infoLive').textContent='Live numbers: '+(S.dbg?'on':'off'); function d(){ $('infoTxt').textContent=infoText(); } d(); clearInterval(infoT); infoT=setInterval(d,1000); }
+function closeInfo(){ $('info').classList.remove('on'); clearInterval(infoT); }
+$('infoClose').addEventListener('click',closeInfo);
+$('infoCopy').addEventListener('click',function(){ var t=infoText(); try{ navigator.clipboard.writeText(t).then(function(){toast('Copied.')},function(){toast('Could not copy. Take a screenshot instead.',3000,true)}); }catch(e){ toast('Could not copy. Take a screenshot instead.',3000,true); } });
+$('infoClear').addEventListener('click',function(){ LOG=[]; saveLog(); S.st=newStat(); $('infoTxt').textContent=infoText(); });
+$('infoLive').addEventListener('click',function(){ S.dbg=!S.dbg; $('dbg').style.display=S.dbg?'block':'none'; $('infoLive').textContent='Live numbers: '+(S.dbg?'on':'off'); });
+$('infoTimed').addEventListener('click',function(){ S.pick=S.pick==='timed'?'auto':'timed'; [].forEach.call($('pickSeg').children,function(c){c.classList.toggle('on',c.dataset.v===S.pick)}); $('infoTimed').textContent='Timed mode: '+(S.pick==='timed'?'on':'off'); log('pick mode -> '+S.pick); });
+log('page start '+VERSION);
 
 function seg(id,key){
   $(id).addEventListener('click',function(e){
@@ -414,7 +524,7 @@ function seg(id,key){
     [].forEach.call($(id).children,function(c){c.classList.toggle('on',c===b)});
   });
 }
-seg('modeSeg','mode'); seg('flowSeg','flow');
+seg('modeSeg','mode'); seg('flowSeg','flow'); seg('pickSeg','pick');
 $('slvSeg').addEventListener('click',function(e){
   var b=e.target.closest('button'); if(!b)return;
   S.sleeve=b.dataset.v==='on';
@@ -456,7 +566,7 @@ function stopCam(){
   S.stream=null; try{vid.srcObject=null}catch(e){}
   try{ if(S.wake&&S.wake.release) S.wake.release(); }catch(e){} S.wake=null;
 }
-function show(id){['home','pre','cam','sav','rev','flip','send'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
+function show(id){[].forEach.call(document.querySelectorAll('.screen'),function(el){el.classList.toggle('on',el.id===id)})}
 function goCam(msg,ms){ show('cam'); updateUI(); layout(); setTimeout(layout,300); startLoop(); if(msg) say(msg,ms||3000); }
 
 /* ---------- toast + dialog ---------- */
@@ -494,6 +604,8 @@ function loadSession(s){
 }
 function touch(s){ s=s||S.cur; if(!s) return; s.saved=false; s.ver++; s.zip=null; s.zipP=null; schedPersist(s); }
 function say(msg,ms){S.toast={msg:msg,until:performance.now()+(ms||1200)}}
+function newUid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function ensureUids(s){ ['fronts','backs'].forEach(function(k){ s[k].forEach(function(x){ if(x&&!x.uid) x.uid=newUid(); }); }); }
 
 function fmtT(s){s=Math.floor(s);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2)}
 function updateUI(){
@@ -520,7 +632,8 @@ function updateUI(){
   else{p.textContent=l.length?'Start next sweep':'Start sweep';p.className='gold-btn';}
   $('undo').textContent=man?'Cancel':'↶ Undo';
   $('undo').disabled=!man&&(scanning||!(S.fronts.length||S.backs.length));
-  $('review').disabled=scanning||man;
+  $('review').disabled=scanning||man||S.state==='stopping';
+  $('capNow').disabled=S.state==='stopping'; $('capNow').innerHTML=man?'📸 Capture':'📸 Capture now';
   $('review').textContent='Review ('+(count(S.fronts)+count(S.backs))+')';
   layout();
 }
@@ -707,6 +820,7 @@ function step(){
         S.m=m;
         var j=judge(m), jr=judge(raw), Q=quality(raw);
         S.lvl=j.level; frame.className=j.level;
+        if(S.state==='scanning'){ var st=S.st; st.ticks++; if(j.level==='green') st.g++; else if(j.level==='yellow') st.y++; else st.r++; if(S.T.lost) st.lost++; if(!S.T.ok) st.weak++; }
         coach.style.borderColor={green:'var(--g)',yellow:'var(--a)',red:'var(--r)',idle:'#bbb'}[j.level];
         $('qbar').firstChild.style.width=Math.round(quality(m))+'%';
         var msg=j.msg;
@@ -714,12 +828,14 @@ function step(){
         if(S.state==='scanning') scanTick(now,r,raw,jr,Q);
         else if(S.state==='manual'){ manualTick(now,j); if(j.level==='green') msg='Hold still…'; }
         else if(S.toast&&now<S.toast.until) msg=S.toast.msg; else if(S.bgDark&&j.level!=='red') msg='Dark counter. A plain light-colored mat under the cards helps.'; else if(j.level==='green') msg=S.sleeve?'Looks good. Keep it in the sleeve, we can read it through plastic. Tap Start sweep':'Looks good. Tap Start sweep when ready';
+        if(S.state==='scanning'&&(S.stuck||S.pick==='timed')) msg=(S.steady>0?'Hold… got it in a moment':'Pause about 1½ seconds over each card, or tap Capture now');
         if(S.state==='scanning'&&S.toast&&now<S.toast.until){msg=S.toast.msg;coach.style.borderColor='var(--g)'}
         else if(S.state==='scanning'&&j.level==='green') msg=S.sleeve?'Nice and steady. Keep it in the sleeve, keep gliding':'Nice and steady. Keep gliding';
         if(coach.textContent!==msg) coach.textContent=msg;
         dbgShow(m,Q,jr);
       }
     }
+    S.st.fpsN++; if(now-S.st.fpsT>=1000){ S.st.fps=S.st.fpsN; S.st.fpsN=0; S.st.fpsT=now; }
     if(S.state==='scanning') $('tm').textContent=fmtT((now-S.t0)/1000)+' · max 3:00';
   }
   requestAnimationFrame(step);
@@ -742,12 +858,33 @@ function nextSeg(sg,force,now){
   if(finishedCheck()) return null;
   var T=S.T, np=nPos(), ns=newSeg(sg.k+1);
   if(force){ T.ox=np.x; T.oy=np.y; }
-  T.tb=now; S.seg=ns; return ns;
+  T.tb=now; S.seg=ns; S.lastSegT=now; return ns;
 }
 function scanTick(now,r,raw,jr,Q){
   var T=S.T, sg=S.seg;
   if(now-S.t0>MAX_SEC*1000){ stopScan('time'); return; }
   var np=nPos(), dx=np.x-T.ox, dy=np.y-T.oy, dist=Math.hypot(dx,dy);
+  // ---- v0.7 safety net: if tracking looks stuck, switch to timed capture (~1.5 s of steady frames per card) ----
+  var fd=0, G=raw.gray, PG0=S.prevG; if(PG0&&PG0.length===G.length){ var qi,qs=0,qn=0; for(qi=0;qi<G.length;qi+=2){qs+=Math.abs(G[qi]-PG0[qi]);qn++} fd=qs/qn; } S.prevG=G;
+  S.weakAvg=S.weakAvg*.93+((!T.ok||T.lost)?1:0)*.07;
+  if(!sg.refG&&now-sg.t0>300) sg.refG=G;
+  if(!S.stuck&&S.pick!=='timed'&&now-S.t0>2500){
+    var stA=S.weakAvg>0.65, stB=false;
+    if(sg.refG&&now-sg.t0>3500&&dist<0.3){ var dd=0,di; for(di=0;di<G.length;di+=3) dd+=Math.abs(G[di]-sg.refG[di]); dd/=Math.ceil(G.length/3); stB=dd>32; }
+    S.stuckN=(stA||stB)?(S.stuckN||0)+1:0;
+    if(S.stuckN>=12){ S.stuck=true; S.st.stuckAt=(now-S.t0)/1000; log('tracking looks stuck (weakAvg '+S.weakAvg.toFixed(2)+(stB?', view changed but position did not':'')+') -> timed capture on'); say('Backup mode: pause about 1½ s over each card',3500); }
+  }
+  var timed=S.stuck||S.pick==='timed';
+  if(timed){
+    var okTimed=raw.edge>=0.012&&raw.bright>=20&&fd<9, pg=frame.querySelector('.prog i');
+    if(okTimed){ S.steady+=100; } else S.steady=0;
+    pg.style.width=Math.min(100,S.steady/15)+'%';
+    if(S.steady>=1500){
+      S.steady=0;
+      if(!(S.prevSeg&&S.prevSeg.gray&&simSAD(S.prevSeg.gray,G,S.prevSeg.AH,raw.AH)<DUP_AUTO)){ forceCapture(S.stuck?'timed':'timed'); return; }
+    }
+    return;   // no position-based card changes while in timed mode
+  }
   // lost or weak tracking: fall back to "did the picture change a lot after the best frame?"
   if(((T.bad>=4&&!T.ok)||now-T.lostAt<1500)&&dist<0.2&&sg.gray&&now-T.tb>600){
     var df=0,i,g=raw.gray,b=sg.gray;for(i=0;i<g.length;i+=3)df+=Math.abs(g[i]-b[i]);df/=g.length/3;
@@ -782,7 +919,7 @@ function sameAsPrev(sg){
 }
 function commitSeg(sg){
   var l=list();
-  if(!sg.best){ if(l.length>=cap()) return; S.prevSeg=null; if(performance.now()-sg.t0<450) return; l.push(null); say('Missed one. Try a bit slower',1500); updateUI(); return; }
+  if(!sg.best){ if(l.length>=cap()) return; S.prevSeg=null; if(performance.now()-sg.t0<450) return; l.push(null); S.st.missed++; log('missed one (no clear frame) at slot '+l.length); say('Missed one. Try a bit slower',1500); updateUI(); return; }
   // same card seen again because you moved slowly? merge into the last one, keep the better photo
   if(sameAsPrev(sg)){
     var p=S.prevSeg;
@@ -793,11 +930,11 @@ function commitSeg(sg){
       cv.toBlob(function(b){ S.pend--; if(b){ var old=it.url; it.blob=b; it.url=URL.createObjectURL(b); if(old) setTimeout(function(){URL.revokeObjectURL(old)},3000);} },'image/jpeg',0.86);
       sg.canvas=null; // the canvas now belongs to the encoder; make a fresh one for the next card
     }
-    say('Same card. Merged',900); return;
+    S.st.merged++; log('same card again -> merged ('+(sg.how||'auto')+')'); say('Same card. Merged',900); return;
   }
   if(l.length>=cap()) return;
-  var item={blob:null,url:null,w:sg.canvas.width,h:sg.canvas.height,conf:(sg.level==='yellow'||sg.score<35)?'review':'ok',score:Math.round(sg.score),sec:S.sec[S.phase],gray:sg.gray,AH:sg.AH};
-  l.push(item); S.pend++;
+  var item={blob:null,url:null,w:sg.canvas.width,h:sg.canvas.height,conf:(sg.level==='yellow'||sg.score<35)?'review':'ok',score:Math.round(sg.score),sec:S.sec[S.phase],gray:sg.gray,AH:sg.AH,uid:newUid(),how:sg.how||'auto'};
+  l.push(item); S.pend++; S.st[item.how]=(S.st[item.how]||0)+1; log('card '+l.length+' '+item.how+' score '+item.score+' '+item.conf+' pos '+nPos().x.toFixed(2)+','+nPos().y.toFixed(2));
   S.prevSeg={item:item,gray:sg.gray,AH:sg.AH,score:sg.score};
   sg.canvas.toBlob(function(b){ S.pend--; if(b){item.blob=b;item.url=URL.createObjectURL(b);} },'image/jpeg',0.86);
   S.found=l.length; say('Card '+l.length+' ✓',900); feedback(); pulse(); updateUI();
@@ -806,6 +943,26 @@ function pulse(){var f=$('found');f.classList.add('pulse');setTimeout(function()
 function finishedCheck(force){
   if(list().length>=cap()){ stopScan(S.phase==='backs'?'backsdone':'limit'); return true; }
   return false;
+}
+/* v0.7: capture right now (button), or from the timed backup. Always works, even if tracking is lost. */
+function forceCapture(reason){
+  var r=vidRegion(), now=performance.now(), sg=S.seg; if(!r||!sg||S.state!=='scanning') return;
+  var a=analyze(r), sgc=sg.canvas||(sg.canvas=document.createElement('canvas')), sc=Math.min(1,1100/r.sw);
+  sgc.width=Math.round(r.sw*sc); sgc.height=Math.round(r.sh*sc);
+  sgc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,sgc.width,sgc.height);
+  sg.best=true; sg.score=72; sg.level=(S.lvl==='green')?'green':'yellow'; sg.gray=a.gray.slice(); sg.AH=a.AH; sg.how=reason;
+  var T=S.T, np=nPos(); commitSeg(sg);
+  if(finishedCheck()) return;
+  var ns=newSeg(sg.k+1); T.ox=np.x; T.oy=np.y; T.tb=now; S.seg=ns; S.lastSegT=now; S.steady=0;
+}
+function captureOne(){
+  if(!vid.videoWidth||S.state!=='ready') return;
+  if(list().length>=cap()){ toast('That is the limit for this scan. Tap Review to see your cards.',3000,true); return; }
+  grab(function(item){
+    var l=list(); if(l.length>=cap()) return;
+    item.how='now'; item.uid=newUid(); item.manual=false; l.push(item); S.st.now++; log('card '+l.length+' now-button (not sweeping)');
+    touch(); feedback(); say('Card '+l.length+' ✓',900); updateUI();
+  });
 }
 /* ---------- recording ---------- */
 function pickMime(){
@@ -848,6 +1005,8 @@ function startScan(){
   if(S.state!=='ready'||!vid.videoWidth) return;
   if(list().length>=cap()){ showModal('That is the limit','You have '+list().length+' cards in this scan. See your cards, then start another section.',[['See your cards','gold',function(){openReview()}]]); return; }
   S.sec[S.phase]++; S.state='scanning'; S.t0=performance.now(); S.T=newT(); S.T.tb=performance.now(); S.seg=newSeg(0); S.prevSeg=null; S.m=null; S.toast=null;
+  S.st=newStat(); S.stuck=false; S.stuckN=0; S.weakAvg=0; S.prevG=null; S.steady=0; S.lastSegT=performance.now();
+  log('sweep start phase '+S.phase+' mode '+S.mode+' sleeve '+S.sleeve+' pick '+S.pick+' have '+list().length);
   startRec(); ding(true); updateUI(); say(S.bgDark?'Go! Dark counter: a light mat under the cards would help.':'Go! Glide slowly along the row',S.bgDark?3500:1800);
 }
 /* saving screen with a real progress bar */
@@ -871,15 +1030,19 @@ async function stopScan(reason){
     if(s===S.cur){ S.state='ready'; S.T=newT(); }
     pgSet(.5,.55,'Saving on this phone…');
     await persist(s);
+    var added=0; try{ added=await Binder.syncSession(s); }catch(e){}
+    S.addedToBinder=added;
+    log('sweep stop ('+reason+') '+count(s.fronts)+' fronts '+count(s.backs)+' backs; binder +'+added+'; auto '+S.st.auto+' timed '+S.st.timed+' now '+S.st.now+' merged '+S.st.merged+' missed '+S.st.missed); saveLog();
     pgSet(.6,.7,'Packing your photos…');
     await prepZip(s,function(f){ pgSet(.6+.38*f,.6+.38*f); });
   }catch(e){ if(window.console) console.warn(e); }
   S.state='ready'; S.T=newT();
   pgSet(1,1,'All set'); pgEnd(); await sleep(350);
   var n=count(s.fronts);
-  S.revNote = reason==='limit'?"That's the 30-card limit for one scan. Use “Scan another section” for more.":
+  var bn=S.addedToBinder?(' '+S.addedToBinder+' card'+(S.addedToBinder===1?'':'s')+' added to your Binder.'):'';
+  S.revNote = (reason==='limit'?"That's the 30-card limit for one scan. Use “Scan another section” for more.":
               reason==='time'?'I stopped at 3 minutes to keep the video small.':
-              reason==='backsdone'?'All backs captured.':'';
+              reason==='backsdone'?'All backs captured.':'')+bn;
   openReview(s);
 }
 function showModal(t,p,btns){
@@ -911,25 +1074,29 @@ function grab(cb){
   var oc=document.createElement('canvas'), s=Math.min(1,1100/r.sw); oc.width=Math.round(r.sw*s); oc.height=Math.round(r.sh*s);
   oc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,oc.width,oc.height);
   var g=grayOfCanvas(oc);
-  oc.toBlob(function(b){ if(b) cb({blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height,conf:'ok',score:0,sec:0,manual:true,gray:g.gray,AH:g.AH}); },'image/jpeg',0.9);
+  oc.toBlob(function(b){ if(b) cb({blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height,conf:'ok',score:0,sec:0,manual:true,gray:g.gray,AH:g.AH,uid:newUid(),how:'manual'}); },'image/jpeg',0.9);
 }
 function manualGrab(){
   if(S.state!=='manual'||!S.manual) return; var mm=S.manual; S.state='ready'; S.hold=0;
   grab(function(item){
     var l=list(mm.side), old=l[mm.idx]; if(old&&old.url) setTimeout(function(){URL.revokeObjectURL(old.url)},3000);
     if(old&&old.label) item.label=old.label;
+    if(old&&old.uid) item.uid=old.uid; S.st.manual++; log('manual capture/retake '+mm.side+' '+(mm.idx+1));
     l[mm.idx]=item; S.manual=null; touch(); feedback(); updateUI();
     var bk=S.rtFlip; S.rtFlip=null; if(bk){ openFlip(bk.i,bk.side); toast('Retaken. Looks better?'); } else openReview();
   });
 }
 frame.querySelector('.prog').style.opacity=0;
-setInterval(function(){frame.querySelector('.prog').style.opacity=(S.state==='manual')?1:0},200);
+setInterval(function(){frame.querySelector('.prog').style.opacity=(S.state==='manual'||(S.state==='scanning'&&(S.stuck||S.pick==='timed')))?1:0},200);
 
 /* ---------- camera buttons ---------- */
 $('prim').addEventListener('click',function(){
   if(S.state==='scanning') stopScan('manual');
   else if(S.state==='manual') manualGrab();
   else if(S.state==='ready'&&!modalOpen()) startScan();
+});
+$('capNow').addEventListener('click',function(){
+  if(S.state==='scanning') forceCapture('now'); else if(S.state==='manual') manualGrab(); else if(S.state==='ready'&&!modalOpen()) captureOne();
 });
 $('undo').addEventListener('click',function(){
   if(S.state==='manual'){S.manual=null;S.state='ready';S.rtFlip=null;updateUI();openReview();return;}
@@ -942,7 +1109,7 @@ $('undo').addEventListener('click',function(){
 $('nextpass').addEventListener('click',toBacks);
 $('modeChip').addEventListener('click',function(){S.mode=S.mode==='graded'?'raw':'graded';S.T=newT();S.m=null;updateUI();});
 $('slvChip').addEventListener('click',function(){S.sleeve=!S.sleeve;S.m=null;updateUI();say(S.sleeve?'Sleeve mode. Keep it in the sleeve, we can read it through plastic.':'No-sleeve mode.',2200);});
-$('dbgChip').addEventListener('click',function(){S.dbg=!S.dbg;$('dbg').style.display=S.dbg?'block':'none';});
+$('dbgChip').addEventListener('click',openInfo);
 $('review').addEventListener('click',function(){openReview()});
 function feedback(){ try{navigator.vibrate&&navigator.vibrate(40)}catch(e){} tick(); }
 var actxA=null;
@@ -971,7 +1138,8 @@ function idbOpen(){
   });
 }
 function ser(s){
-  function it(x){ return x?{blob:x.blob,w:x.w,h:x.h,conf:x.conf,score:x.score,manual:!!x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||''}:null; }
+  ensureUids(s);
+  function it(x){ return x?{blob:x.blob,w:x.w,h:x.h,conf:x.conf,score:x.score,manual:!!x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||'',uid:x.uid||'',how:x.how||''}:null; }
   return {id:s.id,num:s.num,ts:s.ts,mode:s.mode,sleeve:s.sleeve!==false,flow:s.flow,phase:s.phase,saved:s.saved,target:s.target,nvid:s.videos.length||(s.videoLost?1:0),fronts:s.fronts.map(it),backs:s.backs.map(it)};
 }
 function persist(s){
@@ -988,7 +1156,7 @@ function persist(s){
 var pTimers={};
 function schedPersist(s){
   clearTimeout(pTimers[s.id]);
-  pTimers[s.id]=setTimeout(function(){ if(S.pend>0) return schedPersist(s); persist(s); },500);
+  pTimers[s.id]=setTimeout(function(){ if(S.pend>0) return schedPersist(s); persist(s).then(function(){ if(window.Binder) Binder.syncSession(s); }); },500);
 }
 function idbDel(id){
   if(!S.db) return;
@@ -1004,8 +1172,8 @@ async function restore(){
   var rows=await idbAll(), maxN=0;
   rows.sort(function(a,b){return a.ts-b.ts});
   rows.forEach(function(r){
-    function it(x){ if(!x||!x.blob) return null; return {blob:x.blob,url:URL.createObjectURL(x.blob),w:x.w,h:x.h,conf:x.conf,score:x.score,manual:x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||''}; }
-    var s={id:r.id,num:r.num,ts:r.ts,mode:r.mode,sleeve:r.sleeve!==false,flow:r.flow,phase:r.phase||'fronts',fronts:(r.fronts||[]).map(it),backs:(r.backs||[]).map(it),videos:[],
+    function it(x,side,i){ if(!x||!x.blob) return null; return {blob:x.blob,url:URL.createObjectURL(x.blob),w:x.w,h:x.h,conf:x.conf,score:x.score,manual:x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||'',how:x.how||'',uid:x.uid||(r.id+'-'+side+i+'L')}; }
+    var s={id:r.id,num:r.num,ts:r.ts,mode:r.mode,sleeve:r.sleeve!==false,flow:r.flow,phase:r.phase||'fronts',fronts:(r.fronts||[]).map(function(x,i){return it(x,'f',i)}),backs:(r.backs||[]).map(function(x,i){return it(x,'b',i)}),videos:[],
       sec:{fronts:1,backs:1},saved:!!r.saved,target:r.target||null,videoLost:r.nvid>0,ver:0,zip:null,zipP:null};
     if(count(s.fronts)+count(s.backs)===0) { idbDel(r.id); return; }
     S.sessions.push(s); if(r.num>maxN) maxN=r.num;
@@ -1039,7 +1207,7 @@ function prepZip(s,onp){
   if(s.zip) { if(onp) onp(1); return Promise.resolve(s.zip); }
   if(s.zipP) return s.zipP;
   var v=s.ver;
-  var files=[],man='Moose Cards Guided Scan v0.6 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nSleeved: '+(s.sleeve!==false?'yes':'no')+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
+  var files=[],man='Moose Cards Guided Scan v0.7 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nSleeved: '+(s.sleeve!==false?'yes':'no')+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
   var n=Math.max(s.fronts.length,s.backs.length);
   for(var i=0;i<n;i++){
     var f=s.fronts[i],b=s.backs[i];
@@ -1085,6 +1253,8 @@ $('sessList').addEventListener('click',function(e){
   var s=S.sessions.filter(function(x){return x.id===b.dataset.id})[0]; if(s) openReview(s);
 });
 $('startScan').addEventListener('click',function(){ show('pre'); });
+$('nxName').addEventListener('click',function(){ var s=S.cur; Binder.syncSession(s).then(function(){ Binder.openName({sid:s.id}); }); });
+$('nxBinder').addEventListener('click',function(){ var s=S.cur; Binder.syncSession(s).then(function(){ Binder.openBinder('all'); }); });
 $('clearAll').addEventListener('click',function(){
   askDlg('Clear all scans?','This removes every scan and photo from this phone. Anything you saved to your phone stays saved.',[
     {label:'Clear everything',cls:'ghost',fn:function(){ S.sessions.forEach(function(s){ dropSession(s); }); S.sessions=[]; renderHome(); toast('All cleared.'); }},
@@ -1096,7 +1266,7 @@ function dropSession(s){
 }
 
 /* ---------- going home (always asks first if a scan isn't saved) ---------- */
-function unsavedCur(){ var s=S.cur; return s&&!isEmpty(s)&&!s.saved?s:null; }
+function unsavedCur(){ var s=S.cur; return s&&!isEmpty(s)&&!s.saved&&(s.videos.length||!S.db)?s:null; }
 function goHome(){
   if(S.state==='stopping'||S.saveBusy){ toast('One moment, almost done…'); return; }
   if(S.state==='scanning'){
@@ -1108,8 +1278,8 @@ function goHome(){
   if(S.state==='manual'){ S.manual=null; S.state='ready'; }
   var s=unsavedCur();
   if(s&&!$('home').classList.contains('on')){
-    var lost=!S.db?' If you leave this page, they are gone.':' Your photos stay in Your scans on this phone, but the video is only kept until you close this page.';
-    askDlg('Not saved to your phone yet','Save first so nothing gets lost.'+lost,[
+    var lost=!S.db?' If you leave this page, your photos are gone.':' Your card photos are safe in your Binder. The video is only kept until you close this page.';
+    askDlg('Save the video first?','Save it to your phone so nothing gets lost.'+lost,[
       {label:'Save first',cls:'gold',fn:function(){ openReview(s); saveToPhone(s,true); }},
       {label:'Go home anyway',cls:'ghost',fn:function(){ goHomeNow(); }},
       {label:'Stay here',cls:'ghost'}]);
@@ -1122,7 +1292,7 @@ function goHomeNow(){
   if(s&&isEmpty(s)) S.sessions=S.sessions.filter(function(x){return x!==s});
   stopCam(); S.state='ready'; S.manual=null; S.cur=null; S.fronts=[]; S.backs=[]; S.videos=[]; S.sec={fronts:0,backs:0}; S.phase='fronts'; S.revNote='';
   closeDlg(); $('mod').classList.remove('on'); $('viewer').classList.remove('on');
-  renderHome(); show('home');
+  renderHome(); show('home'); if(window.Binder){ Binder.renderHome(); Binder.tabTo('b'); }
 }
 [].forEach.call(document.querySelectorAll('.homeb'),function(b){ b.addEventListener('click',goHome); });
 
@@ -1345,7 +1515,7 @@ $('flipImg').addEventListener('click',function(){F.side=F.side==='front'?'back':
 $('flipLbl').addEventListener('click',function(e){
   var bt=e.target.closest('button'); if(!bt||bt.disabled) return;
   var f=S.cur.fronts[F.i]; if(!f) return; var l=bt.dataset.l;
-  f.label=(f.label===l)?'':l; touch(S.cur); renderFlip();
+  f.label=(f.label===l)?'':l; ensureUids(S.cur); if(window.Binder) Binder.setLabelByUid(f.uid,f.label); touch(S.cur); renderFlip();
   toast(f.label?('Card '+(F.i+1)+': '+f.label+'.'):('Card '+(F.i+1)+': label cleared.'),1400);
 });
 (function(){
@@ -1408,11 +1578,19 @@ $('go').addEventListener('click',async function(){
   try{ await ensureCam(); }catch(e){ $('err').textContent=friendlyErr(e); S.busy=false; return; }
   S.busy=false; createSession(); goCam('Fit one card inside the frame, then tap Start sweep.',4000);
 });
+window.MC={log:log,toast:toast,askDlg:askDlg,closeDlg:closeDlg,show:show,makeZip:makeZip,ensureUids:ensureUids,openInfo:openInfo,startScan:function(){show('pre')},renderScans:function(){renderHome()}};
+S.test={simSAD:simSAD,AW:AW,AHf:function(){return Math.round(AW/(rect.w/rect.h))}};
 window.__scan=S; window.__sim=simSAD; window.__dbg={simSAD:simSAD}; window.__render=renderRev; window.__flip=openFlip; // for testing
 (async function init(){
   S.db=await idbOpen();
-  try{ await restore(); }catch(e){}
-  renderHome();
+  try{ await restore(); }catch(e){ log('restore failed '+e); }
+  try{ await Binder.init(); }catch(e){ log('binder init failed '+e); }
+  renderHome(); Binder.tabTo('b');
+  // move scans from v0.6 and earlier into the Binder (originals stay untouched in Your scans)
+  var before=Binder.count(), moved=0;
+  for(var i=0;i<S.sessions.length;i++){ try{ moved+=await Binder.syncSession(S.sessions[i]); }catch(e){} }
+  if(moved){ log('migrated '+moved+' cards from earlier scans'); Binder.renderHome(); toast('Moved '+moved+' card'+(moved===1?'':'s')+' from your earlier scans into your Binder.',4500); }
+  log('init done; scans '+S.sessions.length+', binder '+Binder.count());
 })();
 })();
 </script>
