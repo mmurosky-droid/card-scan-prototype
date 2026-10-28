@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.10.1 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -15,7 +15,7 @@ function teamsFor(sp){ return TEAMS_BY[sp]||TEAMS; }
 var NICK={}; TEAMS.forEach(function(t){ var p=t.split(' '), k=p[p.length-1].toLowerCase(); if(/^(sox|jays|blazers)$/.test(k)) k=p.slice(-2).join(' ').toLowerCase(); (NICK[k]=NICK[k]||[]).push(t); });
 NICK['d-backs']=['Arizona Diamondbacks']; NICK.indians=['Cleveland Guardians']; NICK.expos=['Washington Nationals']; NICK.sixers=['Philadelphia 76ers'];
 var GRADERS=['PSA','BGS','SGC','CGC','Other'];
-var B={db:null,ready:false,cards:[],binders:[],gone:{},view:{id:'all',pick:null},sel:{},selMode:false,q:Promise.resolve(),tab:'h',saveT:{}};
+var B={db:null,ready:false,cards:[],binders:[],gone:{},trash:{},view:{id:'all',pick:null},sel:{},selMode:false,q:Promise.resolve(),tab:'h',saveT:{}};
 var urlMap=(window.WeakMap?new WeakMap():null);
 function urlOf(b){ if(!b) return ''; if(urlMap){ var u=urlMap.get(b); if(!u){u=URL.createObjectURL(b);urlMap.set(b,u);} return u; } return URL.createObjectURL(b); }
 function G(id){ return document.getElementById(id); }
@@ -52,8 +52,11 @@ function normCard(c){ if(!c.tags)c.tags=[]; if(!c.photos)c.photos=[]; if(!c.spor
 B.init=async function(){
   B.db=await openDB();
   var cs=await getAll('cards'), bs=await getAll('binders'), gs=await getAll('gone');
-  B.cards=cs; B.binders=bs.sort(function(a,b){return a.ts-b.ts}); gs.forEach(function(g){B.gone[g.id]=1});
-  B.cards.forEach(normCard);
+  var gm={}; gs.forEach(function(g){B.gone[g.id]=1; if(g.trash) gm[g.id]=g;});
+  B.binders=bs.sort(function(a,b){return a.ts-b.ts});
+  B.cards=cs.filter(function(c){ var g=gm[c.id]; if(g){ B.trash[c.id]={ts:g.trash,mem:g.mem||[],c:c}; return false; } return true; });
+  Object.keys(gm).forEach(function(id){ if(!B.trash[id]) put('gone',{id:id}); });   // a Recently-deleted note with no card left: keep only the "don't re-add" mark
+  B.cards.forEach(normCard); Object.keys(B.trash).forEach(function(id){ normCard(B.trash[id].c); });
   B.ready=true; try{ askPersist(); }catch(e){} log('binder ready: '+B.cards.length+' cards, '+B.binders.length+' binders, db '+(B.db?'ok':'MISSING'));
   return B.cards.length;
 };
@@ -107,6 +110,46 @@ async function removeCard(c,tomb){
   await del('cards',c.id);
   if(tomb!==false){ B.gone[c.id]=1; await put('gone',{id:c.id}); }
 }
+
+/* ---------- v0.10.1: Recently deleted (soft delete, kept 30 days; the photos' storage is freed only when it purges) ----------
+   A deleted card is only marked: its record and photos stay in the 'cards' store untouched, and a small note in the 'gone' store
+   says "deleted at <time>, was in these binders". So deleting 30 cards is instant (one tiny write), and Undo / Restore just remove the note. */
+var TRASH_MS=30*864e5;
+function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+function batch(ops){ return new Promise(function(res){ if(!B.db||!ops.length) return res(false); try{ var tx=B.db.transaction(['cards','binders','gone'],'readwrite'); ops.forEach(function(o){ var s=tx.objectStore(o[1]); if(o[0]==='put') s.put(o[2]); else s.delete(o[2]); }); tx.oncomplete=function(){res(true)}; tx.onerror=tx.onabort=function(){res(false)}; }catch(e){res(false)} }); }
+function trashList(){ return Object.keys(B.trash).map(function(k){return B.trash[k]}).sort(function(a,b){return b.ts-a.ts}); }
+function daysLeft(t){ return Math.max(0,Math.ceil((t.ts+TRASH_MS-Date.now())/864e5)); }
+function cardBytes(c){ var n=0; ['front','back','thumb','cthumb'].forEach(function(k){ if(c[k]&&c[k].size) n+=c[k].size; }); (c.photos||[]).forEach(function(p){ if(p.blob) n+=p.blob.size||0; if(p.thumb) n+=p.thumb.size||0; }); ['front','back'].forEach(function(k){ if(c.clean&&c.clean[k]&&c.clean[k].blob) n+=c.clean[k].blob.size||0; }); return n; }
+function trashCards(ids){
+  flush();
+  var now=Date.now(), set={}, out=[], ops=[], mem={}, tb=[];
+  ids.forEach(function(id){ if(set[id]) return; var c=byId(id); if(c){ set[id]=c; out.push(id); } });
+  if(!out.length) return [];
+  B.binders.forEach(function(b){ var keep=[], ch=false; b.ids.forEach(function(id){ if(set[id]){ (mem[id]=mem[id]||[]).push(b.id); ch=true; } else keep.push(id); }); if(ch){ b.ids=keep; tb.push(b); } });
+  B.cards=B.cards.filter(function(c){ return !set[c.id]; });
+  out.forEach(function(id){ B.trash[id]={ts:now,mem:mem[id]||[],c:set[id]}; B.gone[id]=1; ops.push(['put','gone',{id:id,trash:now,mem:mem[id]||[]}]); });
+  tb.forEach(function(b){ ops.push(['put','binders',b]); });
+  B.pend=batch(ops);
+  return out;
+}
+function restoreTrash(ids){
+  var ops=[], tb={}, n=0;
+  ids.forEach(function(id){ var t=B.trash[id]; if(!t) return; delete B.trash[id]; delete B.gone[id]; if(!byId(id)) B.cards.push(t.c); n++;
+    t.mem.forEach(function(bid){ var b=binderById(bid); if(b&&b.ids.indexOf(id)<0){ b.ids.push(id); tb[b.id]=b; } });
+    ops.push(['delete','gone',id]); });
+  Object.keys(tb).forEach(function(k){ ops.push(['put','binders',tb[k]]); });
+  B.pend=batch(ops); return n;
+}
+function revokeCard(c){ if(!urlMap) return; var l=[c.front,c.back,c.thumb,c.cthumb]; (c.photos||[]).forEach(function(p){ l.push(p.blob,p.thumb); }); ['front','back'].forEach(function(k){ if(c.clean&&c.clean[k]) l.push(c.clean[k].blob); }); l.forEach(function(b){ if(b){ var u=urlMap.get(b); if(u){ try{URL.revokeObjectURL(u)}catch(e){} urlMap.delete(b); } } }); }
+function purgeTrash(ids){
+  var ops=[], freed=0, gone=[];
+  ids.forEach(function(id){ var t=B.trash[id]; if(!t) return; freed+=cardBytes(t.c); clearTimeout(B.saveT[id]); delete B.saveT[id]; delete B.trash[id]; revokeCard(t.c); ops.push(['delete','cards',id]); ops.push(['put','gone',{id:id}]); gone.push(id); });
+  B.pend=batch(ops);
+  var f2=0; try{ f2=MC().dropScanPhotos(gone)||0; }catch(e){ log('scan photo cleanup: '+e); }
+  return {n:gone.length,freed:freed+f2};
+}
+function purgeExpired(){ var old=Object.keys(B.trash).filter(function(id){ return B.trash[id].ts+TRASH_MS<Date.now(); }); if(old.length){ var r=purgeTrash(old); log('recently deleted: removed '+r.n+' cards older than 30 days, freed '+mbs(r.freed)); } }
+B.purgeExpired=purgeExpired;
 
 /* ---------- Protect my binder: storage permission, backup status, nudges (v0.9) ---------- */
 var HONEST='Your binder is stored on this device and browser. If you clear browser data, delete the app, or lose the device, it\u2019s erased unless you\u2019ve saved a backup.';
@@ -217,6 +260,8 @@ function renderBinders(){
     h+='<button class="brow" data-act="open" data-id="'+b.id+'"><div class="bi" style="'+(first?'background-image:url('+urlOf(first.thumb||first.front)+')':'')+'">'+(first?'':(inv?'🏷️':'📖'))+'</div><div class="bm"><div class="t1">'+esc(b.name)+'<span class="badge">'+(inv?'Inventory':'Collection')+'</span></div><div class="t2">'+sub+'</div></div><span class="go">›</span></button>';
   });
   h+='<button class="ghost-btn" data-act="newb" style="margin-top:4px">＋ New binder</button>';
+  if(n>1) h+='<button class="ghost-btn dbtn" data-act="dups">Find duplicates<small>Compare every card on this device and clean up repeat scans.</small></button>';
+  var tn=Object.keys(B.trash).length; if(tn) h+='<button class="brow" data-act="trash"><div class="bi">🗑️</div><div class="bm"><div class="t1">Recently deleted</div><div class="t2">'+plural(tn,'card')+' · restore any time for 30 days</div></div><span class="go">›</span></button>';
   if(!n) h+='<div class="big-empty">Your Binder is empty. Tap <b>Scan cards</b>. After each scan your cards land here, and you can name them one by one.</div>';
   else h+='<div class="pvnote">'+PHNOTE+' Everything is stored on this phone only.</div>';
   $('paneB').innerHTML=h;
@@ -292,6 +337,8 @@ function homeAct(e){
   else if(a==='open') B.openBinder(b.dataset.id);
   else if(a==='name') B.openName({});
   else if(a==='newb') newBinderDlg();
+  else if(a==='dups') B.openDups('home');
+  else if(a==='trash') B.openTrash('home');
   else if(a==='gobackup') setTab('d');
   else if(a==='card'){ var ids=featuredCards().map(function(c){return c.id}); B.openCard(b.dataset.id,ids); }
   else if(a==='carl') carStep(-1); else if(a==='carr') carStep(1);
@@ -375,34 +422,52 @@ function renderBV(){
   $('bvGrid').innerHTML=h; $('bvGrid').className=B.selMode?'sel':'';
   var anyPv=all.some(function(c){return c.pv!==''});
   $('bvNote').textContent=(anyPv||inv||sortKey==='value')?('*'+PHNOTE):'';
-  $('bvSel').textContent=B.selMode&&!pick?'Done':'Select'; $('bvSel').style.display=pick?'none':'inline-flex';
+  $('bvSel').textContent=B.selMode&&!pick?'Done':'☑ Select'; $('bvSel').classList.toggle('on',B.selMode&&!pick); $('bvSel').style.display=pick?'none':'inline-flex';
+  var dupb=$('bvDup'); dupb.style.display=(v.id==='all'&&!B.selMode&&!pick&&B.cards.length>1)?'block':'none';
+  renderTools();
   var todo=cleanTodo(all), cb=$('bvClean'); cb.style.display=(!B.selMode&&!pick&&todo.length)?'block':'none'; cb.textContent='✨ Clean up photos ('+todo.length+')';
   renderBar();
 }
 function selIds(){ return Object.keys(B.sel).filter(function(k){return B.sel[k]}); }
 function renderBar(){
-  var bar=$('bvBar'), n=selIds().length, v=B.view, bd=v.id==='all'?null:binderById(v.id), pick=v.pick?binderById(v.pick):null;
+  var bar=$('bvBar'), n=selIds().length, v=B.view, pick=v.pick?binderById(v.pick):null;
+  document.body.classList.toggle('barOn',!!B.selMode);
   if(!B.selMode){ bar.className=''; $('bvBody').style.paddingBottom='24px'; return; }
-  bar.className='on'; $('bvBody').style.paddingBottom='170px';
-  var h='<div class="msg">'+(n?n+' selected':'Tap cards to select them')+'</div>';
+  bar.className='on'; $('bvBody').style.paddingBottom='150px';
+  var h='<div class="msg">'+(n?'<b>'+n+' selected</b>':'Tap cards to select them')+'</div>';
   if(pick){
     h+='<div class="r"><button class="ghost-btn" data-b="selall">Select all</button><button class="gold-btn" data-b="doadd"'+(n?'':' disabled')+'>Add '+(n||'')+' to binder</button></div><div class="r"><button class="ghost-btn" data-b="cancelpick">Cancel</button></div>';
   }else{
-    h+='<div class="r"><button class="ghost-btn" data-b="selall">Select all</button><button class="gold-btn" data-b="addto"'+(n?'':' disabled')+'>Add to…</button><button class="gold-btn" data-b="moveto"'+(n?'':' disabled')+'>Move to…</button></div>';
-    h+='<div class="r">'+(bd?'<button class="ghost-btn" data-b="rmfrom"'+(n?'':' disabled')+'>Take out of this binder</button>':'')+'<button class="ghost-btn" data-b="delc"'+(n?'':' disabled')+'>Delete cards</button></div>';
+    h+='<div class="r"><button class="ghost-btn" data-b="cancel">Cancel</button><button class="ghost-btn" data-b="more"'+(n?'':' disabled')+'>More…</button><button class="del-btn" data-b="delc"'+(n?'':' disabled')+'>Delete'+(n?' '+n:'')+'</button></div>';
   }
   bar.innerHTML=h;
 }
+/* select tools: Select all, by scan or date, older duplicates, find duplicates */
+function renderTools(){
+  var el=$('bvTools'); if(!(B.selMode&&!B.view.pick)){ el.innerHTML=''; el.className=''; return; }
+  var all=viewCards().length, n=selIds().length;
+  el.className='on';
+  el.innerHTML='<button class="chip" data-t="all">Select all '+curList.length+'</button><button class="chip" data-t="scan">By scan or date…</button><button class="chip" data-t="old">Older duplicates</button><button class="chip" data-t="dups">Find duplicates ›</button>'+(n?'<button class="chip" data-t="none">Clear</button>':'');
+}
+$('bvTools').addEventListener('click',function(e){
+  var b=e.target.closest('[data-t]'); if(!b) return; var a=b.dataset.t;
+  if(a==='all'){ curList.forEach(function(c){B.sel[c.id]=true}); renderBV(); }
+  else if(a==='none'){ B.sel={}; renderBV(); }
+  else if(a==='scan') selectByScan();
+  else if(a==='old') selectOlderDups();
+  else if(a==='dups') B.openDups();
+});
+$('bvDup').addEventListener('click',function(){ B.openDups(); });
 $('bvGrid').addEventListener('click',function(e){
   var t=e.target.closest('.bt'); if(!t) return; var id=t.dataset.id;
   if(B.selMode){ B.sel[id]=!B.sel[id]; t.classList.toggle('on',!!B.sel[id]); t.querySelector('.ck').textContent=B.sel[id]?'✓':''; renderBar(); return; }
   B.openCard(id,curList.map(function(c){return c.id}));
 });
-$('bvSel').addEventListener('click',function(){ B.selMode=!B.selMode; B.sel={}; renderBV(); });
+$('bvSel').addEventListener('click',function(){ if(!B.selMode) hideUndo(); B.selMode=!B.selMode; B.sel={}; renderBV(); if(B.selMode) MC().toast('Tap cards to select them. Use the buttons above for Select all, scan or date, and repeats.',3600); });
 $('bvSort').addEventListener('change',function(){ lsSet('mc-sort',$('bvSort').value); renderBV(); });
 $('bvSearch').addEventListener('input',function(){ renderBV(); });
 $('bvBack').addEventListener('click',function(){ B.goHome(); });
-B.goHome=function(){ flush(); B.selMode=false; MC().show('home'); setTab('h'); };
+B.goHome=function(){ flush(); B.selMode=false; document.body.classList.remove('barOn'); MC().show('home'); setTab('h'); };
 $('bvAdd').addEventListener('click',function(){ var id=B.view.id; B.openBinder('all',{pick:id}); });
 $('bvMenu').addEventListener('click',function(){
   var bd=binderById(B.view.id); if(!bd) return;
@@ -420,7 +485,10 @@ $('bvBar').addEventListener('click',function(e){
   else if(a==='addto') pickBinder(ids,false);
   else if(a==='moveto') pickBinder(ids,true);
   else if(a==='rmfrom'){ var bd=binderById(B.view.id); bd.ids=bd.ids.filter(function(x){return ids.indexOf(x)<0}); saveBinder(bd); B.sel={}; renderBV(); MC().toast('Taken out of this binder. Still in All cards.'); }
-  else if(a==='delc'){ MC().askDlg('Delete '+ids.length+' card'+(ids.length===1?'':'s')+'?','This removes them and their photos from this phone. Right after, you get a few seconds to tap Undo.',[{label:'Delete',cls:'ghost',fn:function(){ var snap=snapshot(ids); deleteCards(ids).then(function(){ B.sel={}; renderBV(); undoBar(ids.length+' card'+(ids.length===1?'':'s')+' deleted.',function(){ restoreSnap(snap).then(function(){ afterRestore(null); MC().toast('Cards are back ✓'); }); }); }); }},{label:'Keep them',cls:'gold'}]); }
+  else if(a==='cancel'){ B.selMode=false; B.sel={}; renderBV(); }
+  else if(a==='more'){ var bdm=B.view.id==='all'?null:binderById(B.view.id);
+    MC().askDlg(ids.length+' selected','What would you like to do with them?',[{label:'Add to a binder…',cls:'gold',fn:function(){ setTimeout(function(){ pickBinder(ids,false); },50); }},{label:'Move to another binder…',cls:'gold',fn:function(){ setTimeout(function(){ pickBinder(ids,true); },50); }}].concat(bdm?[{label:'Take out of this binder (keeps the cards)',cls:'ghost',fn:function(){ bdm.ids=bdm.ids.filter(function(x){return ids.indexOf(x)<0}); saveBinder(bdm); B.sel={}; renderBV(); MC().toast('Taken out of this binder. Still in All cards.'); }}]:[]).concat([{label:'Close',cls:'ghost'}])); }
+  else if(a==='delc') confirmDelete(ids,{});
 });
 function addTo(b,ids){ var n=0; ids.forEach(function(id){ if(b.ids.indexOf(id)<0){ b.ids.push(id); n++; var c=byId(id); if(c){c.edited=true;saveCard(c);} } }); saveBinder(b); return n; }
 async function deleteCards(ids){ for(var i=0;i<ids.length;i++){ var c=byId(ids[i]); if(c) await removeCard(c,true); } }
@@ -640,15 +708,12 @@ $('cdBinders').addEventListener('click',function(e){
 $('cdMove').addEventListener('click',function(){ pickBinder([D.id],true); });
 $('cdDel').addEventListener('click',function(){
   var c=byId(D.id); if(!c) return;
-  MC().askDlg('Delete this card?','It is removed from every binder, with its photos, from this phone. Right after, you get a few seconds to tap Undo.',[{label:'Delete card',cls:'ghost',fn:function(){
-    var snap=snapshot([c.id]), at=D.i;
-    removeCard(c,true).then(function(){ D.list=D.list.filter(function(x){return x!==c.id});
-      undoBar('Card deleted.',function(){ restoreSnap(snap).then(function(){ afterRestore(c.id,at); MC().toast('Card is back ✓'); }); });
-      if(!D.list.length){ closeCD(); return; } D.i=Math.min(D.i,D.list.length-1); D.id=D.list[D.i]; D.side='front'; D.orig=false; renderCD(); $('cdBody').scrollTop=0; }); }},{label:'Keep it',cls:'gold'}]);
+  confirmDelete([c.id],{at:D.i,fromCD:true});
 });
-/* Undo for deletes: a small bar with an Undo button (the card, its photos and binder spots come back) */
+/* Undo banner: stays at least 30 seconds (45 s here), with a plain line about Recently deleted */
 var UB={t:null,fn:null};
-function undoBar(msg,fn){ $('ubMsg').textContent=msg; UB.fn=fn; $('undoBar').classList.add('on'); clearTimeout(UB.t); UB.t=setTimeout(function(){ $('undoBar').classList.remove('on'); UB.fn=null; },10000); }
+function undoBar(msg,fn,ms){ $('ubMsg').innerHTML=msg; UB.fn=fn; $('undoBar').classList.add('on'); clearTimeout(UB.t); UB.t=setTimeout(function(){ $('undoBar').classList.remove('on'); UB.fn=null; },ms||45000); }
+function hideUndo(){ clearTimeout(UB.t); UB.fn=null; $('undoBar').classList.remove('on'); }
 $('ubBtn').addEventListener('click',function(){ var f=UB.fn; UB.fn=null; clearTimeout(UB.t); $('undoBar').classList.remove('on'); if(f) f(); });
 function snapshot(ids){ return ids.map(function(id){ var c=byId(id); return c?{c:c,mem:B.binders.filter(function(b){return b.ids.indexOf(id)>=0}).map(function(b){return b.id})}:null; }).filter(Boolean); }
 async function restoreSnap(snaps){
@@ -1065,7 +1130,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.1 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -1093,7 +1158,7 @@ function deliver(blob,name,bk){
   btns.push({label:bk?'Not now':'Close',cls:'ghost'});
   MC().askDlg(bk?'Your backup is ready':'Your file is ready',bk?('File: '+name+'. '+WHATS_IN+' It counts as backed up once you save it to Files, Drive or email.'):'Keep it somewhere safe, like your Files app, Drive or email to yourself.',btns);
 }
-function afterBackupChange(){ if(B.tab==='h') renderHomeTab(); else if(B.tab==='d') renderBackup(); else if(B.tab==='b') renderBinders(); refreshTabDot(); if(window.MC&&MC().refreshRevNudge) MC().refreshRevNudge(); }
+function afterBackupChange(){ if(SH&&SH.on&&SH.refresh) SH.refresh(); if(B.tab==='h') renderHomeTab(); else if(B.tab==='d') renderBackup(); else if(B.tab==='b') renderBinders(); refreshTabDot(); if(window.MC&&MC().refreshRevNudge) MC().refreshRevNudge(); }
 B.afterBackupChange=afterBackupChange;
 function b2d(b){ return b?new Promise(function(res){ var fr=new FileReader(); fr.onload=function(){res(fr.result)}; fr.onerror=function(){res(null)}; fr.readAsDataURL(b); }):Promise.resolve(null); }
 async function exportJSON(){
@@ -1103,7 +1168,7 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.1","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
@@ -1165,10 +1230,14 @@ async function importFile(file){
   var j; try{ j=JSON.parse(await file.text()); }catch(e){ MC().toast('That file is not a Collectors Desk backup.',3500,true); return; }
   if(!j||j.app!=='moose-cards-binder'||!Array.isArray(j.cards)){ MC().toast('That file is not a Collectors Desk backup.',3500,true); return; }
   var have={}; B.cards.forEach(function(c){have[c.id]=1});
+  var inTrash=0; j.cards.forEach(function(c){ if(c&&c.id&&B.trash[c.id]){ have[c.id]=1; inTrash++; } });   // cards in Recently deleted stay there unless you restore them from there
+  var trNote=inTrash?(' '+plural(inTrash,'card')+' in this backup '+(inTrash===1?'is':'are')+' in Recently deleted, so I left '+(inTrash===1?'it':'them')+' there.'):'';
+  var backGone=j.cards.filter(function(c){ return c&&c.id&&!have[c.id]&&B.gone[c.id]; }).length;
+  if(backGone) trNote+=' '+plural(backGone,'card')+' in it '+(backGone===1?'was':'were')+' deleted for good earlier and will come back, because the backup has '+(backGone===1?'it':'them')+'. You can delete '+(backGone===1?'it':'them')+' again.';
   var fresh=j.cards.filter(function(c){return c&&c.id&&!have[c.id]}).length, nb=(j.binders||[]).filter(function(b){return !binderById(b.id)}).length;
   var when1=j.exported?(' Saved '+new Date(j.exported).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'})+'.'):'';
-  if(!fresh){ MC().askDlg('Nothing new in this backup',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, 0 new. Everything in it is already on this device, so nothing was changed.'+when1,[{label:'OK',cls:'gold'}]); return; }
-  MC().askDlg('Restore from this backup?',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, '+fresh+' new.'+when1+' New cards are added. Cards you already have are left exactly as they are'+(nb?'. '+nb+' new binder'+(nb===1?'':'s')+' too':'')+'. You can undo it right after.',[
+  if(!fresh){ MC().askDlg('Nothing new in this backup',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, 0 new. Everything in it is already on this device, so nothing was changed.'+trNote+when1,[{label:'OK',cls:'gold'}]); return; }
+  MC().askDlg('Restore from this backup?',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, '+fresh+' new.'+when1+' New cards are added. Cards you already have are left exactly as they are'+(nb?'. '+nb+' new binder'+(nb===1?'':'s')+' too':'')+'. You can undo it right after.'+trNote,[
     {label:'Add '+fresh+' new card'+(fresh===1?'':'s'),cls:'gold',fn:async function(){
       MC().toast('Restoring\u2026',2500); var ids=[], wasGone={}, newB=[], memb=[];
       for(var i=0;i<j.cards.length;i++){
@@ -1183,7 +1252,7 @@ async function importFile(file){
         B.cards.push(c); await put('cards',c); ids.push(c.id); have[c.id]=1; if(i%4===3) await sleep(0);
       }
       (j.binders||[]).forEach(function(ob){ var b=binderById(ob.id); if(!b){ b={id:ob.id,name:ob.name,type:ob.type||'collection',ts:ob.ts||Date.now(),ids:[]}; B.binders.push(b); newB.push(b.id); }
-        (ob.ids||[]).forEach(function(id){ if(have[id]&&b.ids.indexOf(id)<0){ b.ids.push(id); if(newB.indexOf(b.id)<0&&ids.indexOf(id)>=0) memb.push([b.id,id]); } }); saveBinder(b); });
+        (ob.ids||[]).forEach(function(id){ if(have[id]&&!B.trash[id]&&b.ids.indexOf(id)<0){ b.ids.push(id); if(newB.indexOf(b.id)<0&&ids.indexOf(id)>=0) memb.push([b.id,id]); } }); saveBinder(b); });
       B.lastRestore={ids:ids,wasGone:wasGone,newB:newB,memb:memb};
       askPersist(); afterBackupChange();
       MC().askDlg('Restored \u2713',ids.length+' card'+(ids.length===1?'':'s')+' added to your binder. Nothing you already had was changed.',[{label:'Done',cls:'gold'},{label:'Undo, remove those '+ids.length,cls:'ghost',fn:function(){ undoRestore(); }}]);
@@ -1197,6 +1266,230 @@ async function undoRestore(){
   for(var q=0;q<r.newB.length;q++){ var nb=binderById(r.newB[q]); if(nb){ B.binders=B.binders.filter(function(x){return x!==nb}); await del('binders',nb.id); } }
   var n=r.ids.length; B.lastRestore=null; afterBackupChange(); MC().toast('Undone. Removed the '+n+' restored card'+(n===1?'':'s')+'.',3200);
 }
+
+/* ---------- v0.10.1: bottom sheet, delete confirm, Recently deleted, duplicates ---------- */
+var SH={on:false,fn:null,refresh:null};
+function sheetOpen(html,fn){ var bx=$('shBox'), y=bx.scrollTop; bx.innerHTML=html; $('sh').hidden=false; SH.on=true; SH.fn=fn||null; document.body.classList.add('ovOpen'); bx.scrollTop=y; }
+function sheetClose(){ $('sh').hidden=true; SH.on=false; SH.fn=null; SH.refresh=null; SH.ctl=null; document.body.classList.remove('ovOpen'); }
+$('shBox').addEventListener('click',function(e){ var b=e.target.closest('[data-sh]'); if(!b||b.disabled) return; if(SH.fn) SH.fn(b.dataset.sh,b,e); });
+$('sh').addEventListener('click',function(e){ if(e.target===$('sh')){ if(SH.ctl) SH.ctl.cancel=true; sheetClose(); } });
+function refreshAfter(){
+  if($('bv').classList.contains('on')) renderBV();
+  else if($('dp').classList.contains('on')) renderDP();
+  else if($('rd').classList.contains('on')) renderRD();
+  else if($('home').classList.contains('on')) setTab(B.tab);
+}
+function dayLabel(t){ var d=new Date(t), now=new Date(), dd=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5); if(dd===0) return 'Today'; if(dd===1) return 'Yesterday'; return d.toLocaleDateString([], {month:'short',day:'numeric',year:d.getFullYear()===now.getFullYear()?undefined:'numeric'}); }
+/* the delete confirm: exact count, plain words, back up first (one tap, right here) or just delete */
+function confirmDelete(ids,opt){
+  opt=opt||{}; ids=ids.filter(function(id){return byId(id)}); if(!ids.length){ MC().toast('Nothing selected.'); return; }
+  var n=ids.length;
+  function draw(){
+    var t=lastBackup(), notIn=0; ids.forEach(function(id){ var c=byId(id); if(c&&Math.max(c.ts||0,c.upd||0)>t) notIn++; });
+    var box=!t?'<div class="bk bad"><b>No backup yet.</b> If you might want '+(n===1?'this card':'these photos')+' later, save a backup first. It takes one tap.</div>'
+      :notIn===0?'<div class="bk ok"><b>✓ Backed up.</b> '+(n===1?'This card is':'All '+n+' are')+' in your latest backup ('+esc(when(t))+').</div>'
+      :'<div class="bk bad"><b>'+(n===1?'This card is':notIn+' of the '+n+' are')+' not in a backup yet.</b> Latest backup: '+esc(when(t))+'. Save one first if you might want '+(n===1?'it':'them')+' later.</div>';
+    sheetOpen('<h2>Delete '+plural(n,'card')+'?</h2><p class="shp">'+(opt.lead||'')+(n===1?'It moves':'They move')+' to <b>Recently deleted</b>. You can bring '+(n===1?'it':'them')+' back with one tap for 30 days. After that, '+(n===1?'its photos are':'their photos are')+' removed from this device for good.</p>'+box+
+      '<div class="shb"><button class="gold-btn" data-sh="bk">'+(t&&!notIn?'Save a new backup':'Save backup first')+'</button><button class="del-btn" data-sh="go">Delete '+plural(n,'card')+'</button><button class="ghost-btn" data-sh="no">Cancel, keep '+(n===1?'it':'them')+'</button></div><p class="shn">You can delete without a backup. Undo stays on screen for 45 seconds afterwards.</p>',function(a){
+        if(a==='bk') exportJSON(); else if(a==='no') sheetClose(); else if(a==='go'){ sheetClose(); performDelete(ids,opt); } });
+  }
+  SH.refresh=draw; draw();
+}
+function mergeBinders(keepId,others){ B.binders.forEach(function(b){ if(b.ids.indexOf(keepId)<0&&others.some(function(o){return b.ids.indexOf(o)>=0})){ b.ids.push(keepId); saveBinder(b); } }); }
+function performDelete(ids,opt){
+  var t0=performance.now(); (opt.merge||[]).forEach(function(m){ mergeBinders(m.keep,m.others); });
+  var done=trashCards(ids), n=done.length; if(!n) return;
+  B.sel={}; if(!B.view.pick) B.selMode=false;
+  if(opt.fromCD){ D.list=D.list.filter(function(x){return done.indexOf(x)<0}); if(!D.list.length) closeCD(); else { D.i=Math.min(D.i,D.list.length-1); D.id=D.list[D.i]; D.side='front'; D.orig=false; renderCD(); $('cdBody').scrollTop=0; } }
+  else refreshAfter();
+  undoBar('<b>'+(n===1?'Card deleted.':n+' cards deleted.')+'</b><small>Tap Undo, or find '+(n===1?'it':'them')+' in Recently deleted for 30 days.</small>',function(){
+    var r=restoreTrash(done); if(opt.fromCD&&r===1) afterRestore(done[0],opt.at); else refreshAfter(); MC().toast((r===1?'Card is':r+' cards are')+' back ✓',3000); });
+  B.lastDeleteMs=Math.round(performance.now()-t0); log('deleted '+n+' cards in '+B.lastDeleteMs+' ms');
+}
+/* select by scan or date */
+function selectByScan(){
+  var list=viewCards(), days={}, scans={};
+  list.forEach(function(c){ var dk=localDate(c.ts), sk=c.sid||'none'; (days[dk]=days[dk]||{ts:c.ts,ids:[]}).ids.push(c.id); (scans[sk]=scans[sk]||{ts:c.ts,snum:c.snum,ids:[]}).ids.push(c.id); });
+  var D1=Object.keys(days).map(function(k){return {k:'d:'+k,label:dayLabel(days[k].ts),ids:days[k].ids,ts:days[k].ts}}).sort(function(a,b){return b.ts-a.ts});
+  var S1=Object.keys(scans).map(function(k){var g=scans[k]; return {k:'s:'+k,label:(g.snum?'Scan '+g.snum:'Other cards')+' · '+dayLabel(g.ts)+', '+new Date(g.ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),ids:g.ids,ts:g.ts}}).sort(function(a,b){return b.ts-a.ts});
+  var map={}; D1.concat(S1).forEach(function(g){map[g.k]=g});
+  function row(g){ var on=g.ids.filter(function(id){return B.sel[id]}).length; return '<button class="shr'+(on===g.ids.length?' on':'')+'" data-sh="'+esc(g.k)+'"><span class="shc">'+(on===g.ids.length?'✓':(on?'–':''))+'</span><span class="shl">'+esc(g.label)+'<small>'+plural(g.ids.length,'card')+(on&&on<g.ids.length?' · '+on+' selected':'')+'</small></span></button>'; }
+  function draw(){
+    sheetOpen('<h2>Select by scan or date</h2><p class="shp">Tap one to select all of its cards. Tap again to take them off. You can mix them.</p>'+(D1.length>1?'<div class="shs">By day</div>'+D1.map(row).join(''):'')+'<div class="shs">By scan</div>'+S1.map(row).join('')+'<div class="shb"><button class="gold-btn" data-sh="done">Done · '+selIds().length+' selected</button></div>',function(a){
+      if(a==='done'){ sheetClose(); renderBV(); return; }
+      var g=map[a]; if(!g) return; var allOn=g.ids.every(function(id){return B.sel[id]}); g.ids.forEach(function(id){ B.sel[id]=!allOn; }); draw(); });
+  }
+  draw();
+}
+/* duplicate finding: the scanner's picture code (simSAD, DUP_AUTO / DUP_FLAG) run over saved thumbnails, a quick 16x24 fingerprint first */
+B.sig={};
+async function sigOf(c){
+  var blob=c.thumb||c.front||c.back; if(!blob) return null;
+  var e=B.sig[c.id]; if(e&&e.key===blob.size) return e;
+  var g=await MC().grayOfBlob(blob); if(!g) return null;
+  var gn=g.gray.length, gm=0, gq=0, gi; for(gi=0;gi<gn;gi++) gm+=g.gray[gi]; gm/=gn; for(gi=0;gi<gn;gi++){ var gd=g.gray[gi]-gm; gq+=gd*gd; }
+  var gsd=Math.sqrt(gq/gn)||1; g.flat=gsd<10;                 // evens out brightness and contrast between two scans of the same card
+  var gz=new Uint8Array(gn); for(gi=0;gi<gn;gi++) gz[gi]=Math.max(0,Math.min(255,128+(g.gray[gi]-gm)*(45/gsd))); g.gray=gz;
+  var cols=16, rows=24, f=new Float32Array(cols*rows), cn=new Float32Array(cols*rows), x, y, k, m=0;
+  for(y=0;y<g.AH;y++){ var r=Math.min(rows-1,Math.floor(y*rows/g.AH)); for(x=0;x<128;x++){ k=r*cols+(x>>3); f[k]+=g.gray[y*128+x]; cn[k]++; } }
+  for(k=0;k<f.length;k++){ f[k]/=Math.max(1,cn[k]); m+=f[k]; } m/=f.length; for(k=0;k<f.length;k++) f[k]-=m;
+  g.s=f; g.key=blob.size; B.sig[c.id]=g; return g;
+}
+function realVal(c,k){ return (c[k]!==''&&c[k]!=null&&!(c.guess&&c.guess[k]))?String(c[k]).toLowerCase().trim():''; }
+function dupConflict(a,b){ var pa=realVal(a,'player'), pb=realVal(b,'player'); if(pa&&pb&&pa!==pb) return true; var sa=String(a.serial||'').trim(), sb=String(b.serial||'').trim(); if(sa&&sb&&sa!==sb) return true; return false; }
+var FP_TH=16;
+async function findDupGroups(list,onp,ctl){
+  var items=[], i, j;
+  for(i=0;i<list.length;i++){ if(ctl&&ctl.cancel) return null; var s=await sigOf(list[i]); if(s) items.push({c:list[i],s:s}); if(onp&&i%4===3) onp(i+1,list.length); if(i%6===5) await sleep(0); }
+  var n=items.length, p1=[], p2=[]; for(i=0;i<n;i++){ p1[i]=i; p2[i]=i; }
+  function fd(p,x){ while(p[x]!==x){ p[x]=p[p[x]]; x=p[x]; } return x; }
+  function un(p,a,b){ a=fd(p,a); b=fd(p,b); if(a!==b) p[a]=b; }
+  var weak=[], sim=MC().simSAD, AUTO=Math.round(MC().DUP_AUTO*1.4), FLAG=MC().DUP_FLAG;   // 'very likely' = clearly under the scanner's flag line (13 of 18)
+  for(i=0;i<n;i++){
+    if(ctl&&ctl.cancel) return null;
+    var a=items[i];
+    for(j=i+1;j<n;j++){ var b=items[j]; if(Math.abs(a.s.AH-b.s.AH)>3||a.s.flat||b.s.flat) continue;
+      var d=0, k, fa=a.s.s, fb=b.s.s; for(k=0;k<fa.length;k++) d+=Math.abs(fa[k]-fb[k]); d/=fa.length; if(d>FP_TH) continue;
+      if(dupConflict(a.c,b.c)) continue;
+      var v=sim(a.s.gray,b.s.gray,a.s.AH,b.s.AH);
+      if(v<AUTO){ un(p1,i,j); un(p2,i,j); } else if(v<FLAG) weak.push([i,j]); }
+    if(onp&&i%10===9){ onp(list.length,list.length,i+1,n); await sleep(0); }
+  }
+  weak.forEach(function(w){ un(p2,w[0],w[1]); });
+  var comp={}; for(i=0;i<n;i++){ var r2=fd(p2,i); (comp[r2]=comp[r2]||[]).push(i); }
+  var out=[];
+  Object.keys(comp).forEach(function(k){ var m=comp[k]; if(m.length<2) return; var roots={}; m.forEach(function(x){ roots[fd(p1,x)]=1; });
+    var level=Object.keys(roots).length===1?'sure':'maybe';
+    var cs=m.map(function(x){return items[x].c}).sort(function(a,b){return b.ts-a.ts||(b.idx-a.idx)});
+    out.push({ids:cs.map(function(c){return c.id}),level:level}); });
+  out.forEach(pickKeep);
+  out.sort(function(a,b){ return (a.level===b.level?0:a.level==='sure'?-1:1)||(b.ids.length-a.ids.length); });
+  return out;
+}
+function completeness(c){ var n=0; ['player','team','year','brand','number','serial'].forEach(function(k){ if(c[k]!==''&&c[k]!=null) n+=(c.guess&&c.guess[k])?.5:1; }); if(c.back) n+=1; if(hasClean(c)) n+=.5; if(c.edited||c.named) n+=1; if(c.notes) n+=.5; if(c.cost!=='') n+=.5; n+=B.binders.filter(function(b){return b.ids.indexOf(c.id)>=0}).length*.5; return n; }
+function pickKeep(g){
+  var ms=g.ids.map(function(id){ var c=byId(id), s=B.sig[id]||{}; return {id:id,c:c,comp:completeness(c),sharp:s.sharp||0,glare:s.glare||0}; });
+  var maxS=Math.max.apply(null,ms.map(function(m){return m.sharp}))||1;
+  ms.forEach(function(m){ m.score=m.comp*2+(m.sharp/maxS)*3-m.glare*8; });
+  var best=ms.slice().sort(function(a,b){ return (b.score-a.score)||(b.c.ts-a.c.ts); })[0];
+  g.keep=best.id; g.m={}; ms.forEach(function(m){ g.m[m.id]=m; });
+  g.why={};
+  ms.forEach(function(m){
+    var o=ms.filter(function(x){return x!==m}), r=[];
+    if(o.every(function(x){return m.comp>x.comp})) r.push('most details filled in');
+    if(o.every(function(x){return m.sharp>x.sharp*1.08})) r.push('sharpest photo');
+    if(o.every(function(x){return m.glare+.004<x.glare})) r.push('least glare');
+    if(!r.length) r.push(o.every(function(x){return m.c.ts>=x.c.ts})?'newest scan':'good photo');
+    var w=[]; if(o.some(function(x){return x.comp>m.comp})) w.push('fewer details'); if(o.some(function(x){return x.sharp>m.sharp*1.08})) w.push('softer photo'); if(o.some(function(x){return x.glare+.004<m.glare})) w.push('more glare');
+    g.why[m.id]={good:r.slice(0,2).join(' · '),bad:w.slice(0,2).join(' · ')||'older copy'};
+  });
+}
+function progressSheet(title,note,ctl){
+  SH.ctl=ctl; sheetOpen('<h2>'+esc(title)+'</h2><p class="shp" id="shNote">'+esc(note)+'</p><div class="shbar"><i id="shFill"></i></div><div class="shb"><button class="ghost-btn" data-sh="x">Stop</button></div>',function(){ ctl.cancel=true; sheetClose(); });
+}
+function progCb(){ return function(i,n){ var f=$('shFill'); if(f) f.style.width=Math.round(100*i/Math.max(1,n))+'%'; var t=$('shNote'); if(t) t.textContent='Checked '+i+' of '+n+' photos on this device…'; }; }
+async function selectOlderDups(){
+  var list=viewCards(); if(list.length<2){ MC().toast('You need at least two cards to compare.'); return; }
+  var ctl={cancel:false}; progressSheet('Looking for repeats…','Comparing your photos on this device. Nothing is sent anywhere.',ctl);
+  var gs=await findDupGroups(list,progCb(),ctl); if(!gs){ return; } sheetClose();
+  var n=0; gs.forEach(function(g){ if(g.level!=='sure') return; var best=g.ids.slice().sort(function(a,b){ return (completeness(byId(b))-completeness(byId(a)))||(byId(b).ts-byId(a).ts); })[0]; g.ids.forEach(function(id){ if(id!==best){ B.sel[id]=true; n++; } }); });   // keep the newest scan, unless an older one has more details filled in
+  renderBV();
+  MC().toast(n?'Selected '+plural(n,'older repeat')+' (older scans of the same card). I kept the newest, or the one with more details. Check them, then tap Delete.':'No repeats found. Nothing was selected.',4500);
+}
+/* Find duplicates screen */
+B.dp={groups:[],busy:false,shown:20,from:'home'};
+var DUPOK=lsGet('mc-dupok',{});
+function gkey(g){ return g.ids.slice().sort().join('+'); }
+B.openDups=async function(from){
+  flush(); B.dp.from=from||($('bv').classList.contains('on')?'bv':'home'); B.dp.shown=20; B.dp.groups=[]; B.dp.busy=true; B.dp.prog=[0,1];
+  MC().show('dp'); renderDP();
+  var ctl=B.dp.ctl={cancel:false};
+  var gs=await findDupGroups(B.cards.slice(),function(i,n,j,m){ B.dp.prog=[i,n]; var f=$('dpFill'); if(f&&j==null) f.style.width=Math.round(100*i/Math.max(1,n))+'%'; },ctl);
+  if(!gs) return;
+  B.dp.groups=gs; B.dp.busy=false; renderDP();
+};
+function dpLeave(){ if(B.dp.ctl) B.dp.ctl.cancel=true; B.dp.busy=false; if(B.dp.from==='bv') B.openBinder('all'); else B.goHome(); }
+$('dpBack').addEventListener('click',dpLeave);
+function liveGroups(){ var out=[]; B.dp.groups.forEach(function(g){ var ids=g.ids.filter(function(id){return byId(id)}); if(ids.length<2) return; out.push({g:g,ids:ids}); }); return out; }
+function renderDP(){
+  var sub=$('dpSub'), top=$('dpTop'), list=$('dpList');
+  if(B.dp.busy){ sub.textContent='Comparing your photos on this device. Nothing is sent anywhere.'; top.innerHTML='<div class="shbar"><i id="dpFill" style="width:'+Math.round(100*B.dp.prog[0]/Math.max(1,B.dp.prog[1]))+'%"></i></div><div class="kv">This takes a few seconds for a few hundred cards. You can leave and come back.</div>'; list.innerHTML=''; return; }
+  var all=liveGroups(), hidden=all.filter(function(x){return DUPOK[gkey(x.g)]}), L=all.filter(function(x){return !DUPOK[gkey(x.g)]});
+  var sure=L.filter(function(x){return x.g.level==='sure'}), maybe=L.length-sure.length;
+  var extra=0; sure.forEach(function(x){ extra+=x.ids.length-1; });
+  var extraAll=0; L.forEach(function(x){ extraAll+=x.ids.length-1; });
+  sub.textContent=L.length?(plural(L.length,'group')+' of likely repeats · '+plural(extraAll,'card')+' could go.'):'';
+  var h='';
+  if(!L.length) h+='<div class="big-empty">✓ No repeats found.<br>Every card in your collection looks different from the others.</div>';
+  else{
+    if(sure.length) h+='<button class="gold-btn dpAll" data-d="all">Clean up all '+extra+' duplicate'+(extra===1?'':'s')+'</button><div class="kv">Keeps the photo marked <b>KEEP</b> in each of the '+plural(sure.length,'very likely group')+' and moves the other '+extra+' to Recently deleted. You confirm first and can undo.'+(maybe?' The '+maybe+' “might be” group'+(maybe===1?'':'s')+' below are not included. Check '+(maybe===1?'it':'them')+' yourself.':'')+'</div>';
+    else h+='<div class="kv">I am not sure enough about any of these to clean them up all at once. Check each group yourself.</div>';
+  }
+  if(hidden.length) h+='<button class="linkb" data-d="unhide">Show '+plural(hidden.length,'group')+' you said are different</button>';
+  top.innerHTML=h;
+  var hh='';
+  L.slice(0,B.dp.shown).forEach(function(x,gi){
+    var g=x.g, keep=x.ids.indexOf(g.keep)>=0?g.keep:x.ids[0], others=x.ids.filter(function(id){return id!==keep});
+    hh+='<div class="dg" data-gi="'+B.dp.groups.indexOf(g)+'"><div class="dgh"><b>Group '+(gi+1)+'</b><span class="lv '+g.level+'">'+(g.level==='sure'?'Very likely the same card':'Might be the same card · you decide')+'</span></div><div class="dgr">';
+    x.ids.slice().sort(function(p,q){ return (q===keep)-(p===keep); }).forEach(function(id){ var c=byId(id), k=id===keep, w=g.why[id]||{good:'',bad:''};
+      hh+='<button class="dt '+(k?'keep':'del')+'" data-c="'+id+'" aria-label="'+(k?'Keeping this one':'Tap to keep this one instead')+'"><img src="'+urlOf(c.thumb||c.front||c.back)+'" alt="" loading="lazy" decoding="async"><span class="kb">'+(k?'✓ KEEP':'Will delete')+'</span><span class="cap"><b>'+esc(cardTitle(c))+'</b><i>'+esc(k?(w.good||'best of the group'):w.bad)+'</i></span></button>'; });
+    hh+='</div><div class="dgn">The gold <b>KEEP</b> is the one I would keep. <u>Tap any other photo to keep that one instead.</u></div><div class="dga"><button class="del-btn" data-d="del">Delete the other '+others.length+'</button><button class="ghost-btn" data-d="skip">They are different · keep all</button></div></div>';
+  });
+  if(L.length>B.dp.shown) hh+='<button class="ghost-btn" data-d="more" style="width:100%">Show more groups ('+(L.length-B.dp.shown)+' left)</button>';
+  list.innerHTML=hh;
+}
+$('dpBody').addEventListener('click',function(e){
+  var t=e.target.closest('.dt'), b=e.target.closest('[data-d]');
+  if(t){ var gEl=t.closest('.dg'), g=B.dp.groups[+gEl.dataset.gi]; if(g){ g.keep=t.dataset.c; var y=$('dpBody').scrollTop; renderDP(); $('dpBody').scrollTop=y; } return; }
+  if(!b) return; var a=b.dataset.d, L=liveGroups().filter(function(x){return !DUPOK[gkey(x.g)]});
+  if(a==='more'){ B.dp.shown+=30; var y2=$('dpBody').scrollTop; renderDP(); $('dpBody').scrollTop=y2; }
+  else if(a==='unhide'){ DUPOK={}; lsSet('mc-dupok',DUPOK); renderDP(); }
+  else if(a==='all'){ var ids=[], merge=[]; L.forEach(function(x){ if(x.g.level!=='sure') return; var keep=x.ids.indexOf(x.g.keep)>=0?x.g.keep:x.ids[0], oth=x.ids.filter(function(id){return id!==keep}); ids=ids.concat(oth); merge.push({keep:keep,others:oth}); });
+    confirmDelete(ids,{lead:'I keep the photo marked KEEP in each of the '+plural(merge.length,'group')+'. ',merge:merge}); }
+  else{ var gEl2=b.closest('.dg'), g2=B.dp.groups[+gEl2.dataset.gi]; if(!g2) return; var x2=liveGroups().filter(function(x){return x.g===g2})[0]; if(!x2) return;
+    var keep2=x2.ids.indexOf(g2.keep)>=0?g2.keep:x2.ids[0], oth2=x2.ids.filter(function(id){return id!==keep2});
+    if(a==='del') confirmDelete(oth2,{lead:'I keep the photo marked KEEP. ',merge:[{keep:keep2,others:oth2}]});
+    else if(a==='skip'){ DUPOK[gkey(g2)]=1; lsSet('mc-dupok',DUPOK); renderDP(); MC().toast('OK, keeping all of them. I will not show that group again.',3200); } }
+});
+/* Recently deleted screen */
+B.rdSel={};
+B.openTrash=function(from){ hideUndo(); flush(); purgeExpired(); B.rdSel={}; B.rdFrom=from||'home'; MC().show('rd'); renderRD(); $('rdBody').scrollTop=0; };
+function rdIds(){ return Object.keys(B.rdSel).filter(function(k){return B.rdSel[k]&&B.trash[k]}); }
+function renderRD(){
+  var L=trashList(), n=L.length, bytes=0, i; L.forEach(function(t){ bytes+=cardBytes(t.c); });
+  $('rdSub').innerHTML=n?(plural(n,'card')+' · about '+mbs(bytes)+' on this device. Each is kept 30 days, then its photos are removed for good. <b>Backups do not include these.</b>'):'';
+  var sel=rdIds(), ns=sel.length;
+  $('rdTools').innerHTML=n?'<button class="chip" data-r="all">Select all '+n+'</button>'+(ns?'<button class="chip" data-r="none">Clear</button>':''):'';
+  var h='';
+  L.forEach(function(t){ var c=t.c, on=!!B.rdSel[c.id], dl=daysLeft(t);
+    h+='<div class="bt sel'+(on?' on':'')+'" data-id="'+c.id+'" role="button" tabindex="0"><img src="'+urlOf(c.thumb||c.front||c.back)+'" alt="" loading="lazy" decoding="async"><span class="ck">'+(on?'✓':'')+'</span><span class="cap"><b>'+esc(cardTitle(c))+'</b><i>'+dl+' day'+(dl===1?'':'s')+' left · deleted '+esc(dayLabel(t.ts))+'</i></span><button class="rs" data-rs="'+c.id+'">↩ Restore</button></div>'; });
+  if(!n) h='<div class="big-empty" style="grid-column:1/-1">Nothing here.<br>Cards you delete wait here for 30 days, so you can change your mind.</div>';
+  $('rdGrid').className='sel'; $('rdGrid').innerHTML=h;
+  var bar=$('rdBar');
+  document.body.classList.toggle('barOn',n>0);
+  if(!n){ bar.className=''; $('rdBody').style.paddingBottom='24px'; return; }
+  bar.className='on'; $('rdBody').style.paddingBottom='140px';
+  bar.innerHTML=ns?('<div class="msg"><b>'+ns+' selected</b></div><div class="r"><button class="ghost-btn" data-r="none">Cancel</button><button class="del-btn" data-r="purge">Delete '+ns+' for good</button><button class="gold-btn" data-r="restore">Restore '+ns+'</button></div>'):('<div class="msg">Tap a card to select it, or restore one with its ↩ button.</div><div class="r"><button class="ghost-btn" data-r="empty">Empty now…</button><button class="gold-btn" data-r="restoreall">Restore all '+n+'</button></div>');
+}
+function rdDone(n,what){ MC().toast(n===1?'1 card '+what+' ✓':n+' cards '+what+' ✓',3000); }
+$('rdGrid').addEventListener('click',function(e){
+  var rs=e.target.closest('[data-rs]'); if(rs){ var r=restoreTrash([rs.dataset.rs]); delete B.rdSel[rs.dataset.rs]; renderRD(); rdDone(r,'restored'); return; }
+  var t=e.target.closest('.bt'); if(!t) return; B.rdSel[t.dataset.id]=!B.rdSel[t.dataset.id]; renderRD();
+});
+$('rdTools').addEventListener('click',function(e){ var b=e.target.closest('[data-r]'); if(!b) return; if(b.dataset.r==='all') trashList().forEach(function(t){ B.rdSel[t.c.id]=true; }); else B.rdSel={}; renderRD(); });
+function purgeDlg(ids,all){
+  var n=ids.length;
+  MC().askDlg((all?'Empty Recently deleted?':'Delete '+plural(n,'card')+' for good?'),'This cannot be undone. '+(n===1?'The card and its photos are':plural(n,'card')+' and their photos are')+' removed from this device and the space is freed.',[{label:'Delete '+plural(n,'card')+' for good',cls:'ghost',fn:function(){ var r=purgeTrash(ids); B.rdSel={}; renderRD(); MC().toast('Deleted for good. About '+mbs(r.freed)+' freed.',3600); }},{label:'Keep them',cls:'gold'}]);
+}
+$('rdBar').addEventListener('click',function(e){
+  var b=e.target.closest('[data-r]'); if(!b) return; var a=b.dataset.r, ids=rdIds();
+  if(a==='none'){ B.rdSel={}; renderRD(); }
+  else if(a==='restore'){ var r=restoreTrash(ids); B.rdSel={}; renderRD(); rdDone(r,'restored'); }
+  else if(a==='restoreall'){ var r2=restoreTrash(Object.keys(B.trash)); B.rdSel={}; renderRD(); rdDone(r2,'restored'); }
+  else if(a==='purge') purgeDlg(ids,false);
+  else if(a==='empty') purgeDlg(Object.keys(B.trash),true);
+});
+$('rdBack').addEventListener('click',function(){ B.goHome(); setTab('b'); });
 
 /* ---------- start-up / wiring ---------- */
 B.PHNOTE=PHNOTE; B.debugInfo=function(){ return 'binder: '+B.cards.length+' cards, '+B.binders.length+' binders, named '+(B.cards.length-unnamedCount())+', db '+(B.db?'ok':'none')+', sort '+lsGet('mc-sort','date'); };
