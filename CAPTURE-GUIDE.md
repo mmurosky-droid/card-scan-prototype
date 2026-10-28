@@ -36,12 +36,17 @@ Backs matter. The year and set are printed there.
    - Red tiles say **Looks like a duplicate**. Tap one, then tap **Merge with previous** or **Remove duplicate**.
    - Or use the **Cards in this section** box. Tap − or + and then **Update count**.
    - Tap any photo to **Retake** or **Remove** it.
-4. Under **What next?** pick one:
+4. Tap **Review each card** to flip through big photos. Swipe or tap the arrows. Tap the photo (or Front/Back) to see the back. Mark each card **Sell**, **Keep** or **Grade**. Tap a label again to clear it.
+5. Tap **Send or share** (or **Send →** while reviewing):
+   - **Share** opens the phone Share sheet with the photos zip and the video.
+   - **Email to myself** opens your email with the card list and labels. Email can't carry the photos, so Share them separately.
+   - **Send to my collection** is coming soon. Nothing leaves your phone yet.
+6. Under **What next?** you can also pick:
    - **Scan the backs**
    - **Scan another section**
    - **Save to my phone** (video and photos zip). You stay on this screen.
    - **Done, back to home**
-5. The **Home** button at the top is always there. If a scan isn't saved, it offers **Save first**.
+7. The **Home** button at the top is always there. If a scan isn't saved, it offers **Save first**.
 
 Home lists **Your scans**. Tap one to open its cards again anytime.
 
@@ -93,3 +98,4 @@ You're doing great. Every card you scan is one less to wonder about.
 - v0.3: video row scan (sweep two rows at a time, up to 30 cards), bigger green box. Backup: `index.html.bak-v0.2`.
 - v0.4: sweep tracking picks the best frame per card.
 - v0.5: instant Saving screen, "Your cards" results with a What next? panel, real Home with Your scans and Start a scan, Home button on every screen (Save first), still photos kept in IndexedDB (never the video), Save to my phone uses the share sheet when available and stays put. Stricter card changes (net sweep distance, hysteresis, image similarity merge). Duplicate flags, Merge with previous, Remove duplicate, editable count. Backup: `index.html.bak-v0.4`.
+- v0.5.1: flip-through Review screen (large front/back, next/prev or swipe, Sell/Keep/Grade labels kept on the phone and added to the zip as cards.csv), Send screen (Share with files, Email to myself, Send to my collection coming soon). Backup: `index.html.bak-v0.5`.

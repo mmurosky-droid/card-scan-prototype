@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0a08">
-<title>Guided Scan · prototype v0.5</title>
+<title>Guided Scan · prototype v0.5.1</title>
 <style>
 :root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0b0a08;--panel:rgba(18,16,12,.80);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -110,7 +110,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #grid .t b{position:absolute;top:4px;right:4px;font-size:10px;font-weight:600;background:var(--a);color:#2a1a00;border-radius:8px;padding:2px 6px}
 #viewer{background:rgba(8,7,5,.95)}
 #viewer img{max-width:92%;max-height:56vh;border-radius:10px;border:1px solid var(--gold)}
-/* ---- v0.5 ---- */
+/* ---- v0.5.1 ---- */
 .screen{overflow:hidden}
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;padding:calc(env(safe-area-inset-top) + 8px) 12px 6px}
 .hdr .hv{color:var(--mut);font-size:12.5px;letter-spacing:.5px}
@@ -181,13 +181,48 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #dlg .mbtns a{display:block;text-align:center;text-decoration:none;line-height:28px}
 #viewer p.vh{font-size:14px;color:var(--mut);margin:0;max-width:320px;line-height:1.4}
 #viewer img{max-height:44vh}
+
+/* ---- v0.5.1: flip-through review + send ---- */
+#flip,#send{background:var(--bg)}
+#flipBody{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 14px calc(env(safe-area-inset-bottom) + 12px);gap:8px}
+#flipTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#flipTop h1{font-size:22px;color:var(--gold2);margin:0}
+#flipSide{display:flex;gap:6px}
+#flipSide button{min-height:44px;padding:8px 16px;border-radius:999px;border:1px solid rgba(212,168,75,.5);background:rgba(255,255,255,.06);color:var(--gold2);font-size:15px;font-weight:600}
+#flipSide button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1a1405}
+#flipStage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#120f09;border:1px solid rgba(212,168,75,.3);touch-action:pan-y;overflow:hidden}
+#flipImg{max-width:100%;max-height:100%;object-fit:contain;display:block}
+#flipMiss{display:none;color:var(--mut);text-align:center;padding:20px 64px;line-height:1.45;font-size:16px}
+#flipTag{position:absolute;top:8px;left:8px;font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 10px;display:none;z-index:1}
+#flipTag.sell{display:block;background:#ffb53d;color:#2a1a00}#flipTag.keep{display:block;background:#3ddc84;color:#06240f}#flipTag.grade{display:block;background:#7ab8ff;color:#06182e}
+#flipDup{position:absolute;top:8px;right:8px;font-size:12px;background:rgba(255,82,82,.9);color:#fff;border-radius:999px;padding:4px 10px;display:none;z-index:1}
+.fnav{position:absolute;top:50%;transform:translateY(-50%);width:52px;height:80px;border-radius:14px;background:rgba(20,17,11,.7);border:1px solid rgba(212,168,75,.5);color:var(--gold2);font-size:30px;display:grid;place-items:center;z-index:2}
+.fnav:disabled{opacity:.25}
+#fPrev{left:6px}#fNext{right:6px}
+#flipLbl{display:flex;gap:8px}
+#flipLbl button{flex:1;min-height:56px;border-radius:14px;border:2px solid rgba(212,168,75,.45);background:rgba(255,255,255,.06);color:var(--txt);font-size:18px;font-weight:700}
+#flipLbl button[data-l=sell].on{background:#ffb53d;border-color:#ffb53d;color:#2a1a00}
+#flipLbl button[data-l=keep].on{background:#3ddc84;border-color:#3ddc84;color:#06240f}
+#flipLbl button[data-l=grade].on{background:#7ab8ff;border-color:#7ab8ff;color:#06182e}
+#flipAct{display:flex;gap:8px}#flipAct button{flex:1;min-height:54px}
+#flipHint{color:var(--mut);font-size:12.5px;text-align:center;margin:0}
+#sendBody{flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 18px)}
+#sendBody h1{font-size:28px;color:var(--gold2)}
+#sendSum{color:var(--txt);font-size:16px;line-height:1.5;margin:4px 0 12px}
+#sendSum b{color:var(--gold2)}
+#sendBody .gold-btn,#sendBody .ghost-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:62px;margin-bottom:10px;font-size:18px;text-decoration:none;text-align:center}
+#sendBody small{display:block;font-size:12.5px;font-weight:400;opacity:.8;margin-top:2px}
+#sendBody .soon{opacity:.55;border-style:dashed}
+#sendInfo{color:var(--mut);font-size:13px;line-height:1.4;margin:0 2px 10px}
+#grid .t u{position:absolute;left:4px;top:4px;font-size:10px;font-weight:700;text-decoration:none;border-radius:8px;padding:2px 6px}
+#grid .t u.sell{background:#ffb53d;color:#2a1a00}#grid .t u.keep{background:#3ddc84;color:#06240f}#grid .t u.grade{background:#7ab8ff;color:#06182e}
 </style>
 </head>
 <body>
 
 <section id="home" class="screen on">
   <div id="homeScroll">
-    <div class="crest">Moose Cards · v0.5</div>
+    <div class="crest">Moose Cards · v0.5.1</div>
     <h1>Guided Scan</h1>
     <p class="sub">Scan your cards fast. Everything stays on your phone.</p>
     <div id="homeWarn"></div>
@@ -201,13 +236,13 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
       <li><span>Check your cards, scan the backs, then save everything to your phone.</span></li>
     </ol>
     <div style="text-align:center;margin-top:10px"><button class="linkb" id="clearAll">Clear all scans from this phone</button></div>
-    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:2px">Guided Scan v0.5 · Moose Cards</div>
+    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:2px">Guided Scan v0.5.1 · Moose Cards</div>
   </div>
 </section>
 
 <section id="pre" class="screen">
-  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.5</span></div>
-  <div class="crest">Moose Cards · prototype v0.5</div>
+  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.5.1</span></div>
+  <div class="crest">Moose Cards · prototype v0.5.1</div>
   <h1>Get ready</h1>
   <p class="sub">Glide your phone slowly along a row of cards. I record the video and pick the best photo of each card for you. Everything stays on your phone.</p>
 
@@ -231,7 +266,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <button class="gold-btn" id="go">Start camera</button>
   <div id="err" role="alert"></div>
   <div class="priv">Nothing is uploaded. Photos are kept on this phone until you delete them.</div>
-  <footer>Guided Scan v0.5 · Moose Cards</footer>
+  <footer>Guided Scan v0.5.1 · Moose Cards</footer>
 </section>
 
 <section id="cam" class="screen">
@@ -263,7 +298,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="sav" class="screen">
-  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.5</span></div>
+  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.5.1</span></div>
   <div class="box">
     <div class="spin" aria-hidden="true"></div>
     <h2>Saving your scan…</h2>
@@ -274,7 +309,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="rev" class="screen">
-  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.5</span></div>
+  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.5.1</span></div>
   <div id="revScroll">
     <h1>Your cards</h1>
     <div id="sum"></div>
@@ -289,6 +324,8 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
     <div id="grid"></div>
     <div id="next">
       <h2>What next?</h2>
+      <button class="gold-btn" id="nxFlip">Review each card<small>Flip through big. Mark Sell, Keep or Grade</small></button>
+      <button class="ghost-btn" id="nxSend">Send or share<small>Share, email yourself, or save</small></button>
       <button class="gold-btn" id="nxBacks">Scan the backs<small>Same order as the fronts</small></button>
       <button class="ghost-btn" id="nxSec">Scan another section<small>Start a fresh scan, up to 30 more cards</small></button>
       <button class="gold-btn dim" id="nxSave">Save to my phone<small>Video + photos zip</small></button>
@@ -303,6 +340,37 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   </div>
   <div class="modal" id="viewer"><h2 id="vT"></h2><p class="vh" id="vH"></p><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
 </section>
+<section id="flip" class="screen">
+  <div class="hdr"><button class="chip homeb" id="flipHome">⌂ Home</button><span class="hv">Section <span id="flipSec">1</span> · v0.5.1</span></div>
+  <div id="flipBody">
+    <div id="flipTop"><h1 id="flipN">Card 1 of 1</h1>
+      <div id="flipSide"><button id="fsF" class="on">Front</button><button id="fsB">Back</button></div></div>
+    <div id="flipStage">
+      <button class="fnav" id="fPrev" aria-label="Previous card">‹</button>
+      <img id="flipImg" alt="">
+      <div id="flipMiss"></div>
+      <span id="flipTag"></span><span id="flipDup">Looks like a duplicate</span>
+      <button class="fnav" id="fNext" aria-label="Next card">›</button>
+    </div>
+    <p id="flipHint">Swipe or tap the arrows. Tap the photo to flip it.</p>
+    <div id="flipLbl"><button data-l="sell">Sell</button><button data-l="keep">Keep</button><button data-l="grade">Grade</button></div>
+    <div id="flipAct"><button class="ghost-btn" id="flipGrid">All cards</button><button class="gold-btn" id="flipSend">Send →</button></div>
+  </div>
+</section>
+
+<section id="send" class="screen">
+  <div class="hdr"><button class="chip homeb" id="sendHome">⌂ Home</button><span class="hv">Section <span id="sendSec">1</span> · v0.5.1</span></div>
+  <div id="sendBody">
+    <h1>Send</h1>
+    <div id="sendSum"></div>
+    <button class="gold-btn" id="sdShare">Share<small>Photos zip + video, with the Share sheet</small></button>
+    <a class="ghost-btn" id="sdMail" href="#">Email to myself<small>Opens your email with the card list</small></a>
+    <p id="sendInfo"></p>
+    <button class="ghost-btn soon" id="sdColl">Send to my collection<small>Coming soon</small></button>
+    <button class="ghost-btn" id="sdBack">← Back to my cards</button>
+  </div>
+</section>
+
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="dlg"><h2 id="dlgT"></h2><p id="dlgP"></p><div class="mbtns" id="dlgB"></div></div>
 <script>
@@ -369,7 +437,7 @@ function stopCam(){
   S.stream=null; try{vid.srcObject=null}catch(e){}
   try{ if(S.wake&&S.wake.release) S.wake.release(); }catch(e){} S.wake=null;
 }
-function show(id){['home','pre','cam','sav','rev'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
+function show(id){['home','pre','cam','sav','rev','flip','send'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
 function goCam(msg,ms){ show('cam'); updateUI(); layout(); setTimeout(layout,300); startLoop(); if(msg) say(msg,ms||3000); }
 
 /* ---------- toast + dialog ---------- */
@@ -543,7 +611,7 @@ function track(g,AH,dt){
     if(T.bad>=6){T.key=g.slice();T.kx=T.px;T.ky=T.py;T.bad=0}
   }
   T.ppx=T.px;T.ppy=T.py;
-  // progress = net distance along the sweep direction (v0.5): hand wobble and going back never add up
+  // progress = net distance along the sweep direction (v0.5.1): hand wobble and going back never add up
   var dx=T.px/W, dy=T.py/W;
   if(!T.dir){ var mg=Math.hypot(dx,dy); if(mg>=0.12) T.dir=[dx/mg,dy/mg]; T.L=Math.max(T.L,mg); }
   else T.L=Math.max(T.L,dx*T.dir[0]+dy*T.dir[1]);
@@ -626,7 +694,7 @@ function scanTick(now,r,raw,jr,Q){
     var df=0,i,g=raw.gray,b=sg.gray;for(i=0;i<g.length;i+=3)df+=Math.abs(g[i]-b[i]);df/=g.length/3;
     if(df>38) T.L=Math.max(T.L,(sg.k+0.5)*P+HYST*P+0.001);
   }
-  // card boundary crossed -> close this card's segment (needs a clear extra slide, v0.5)
+  // card boundary crossed -> close this card's segment (needs a clear extra slide, v0.5.1)
   var kNow=Math.max(0,Math.floor((T.L-HYST*P)/P+0.5)), guard=0;
   while(sg.k<kNow&&S.state==='scanning'&&guard++<4){
     commitSeg(sg);
@@ -840,7 +908,7 @@ function idbOpen(){
   });
 }
 function ser(s){
-  function it(x){ return x?{blob:x.blob,w:x.w,h:x.h,conf:x.conf,score:x.score,manual:!!x.manual,sec:x.sec,gray:x.gray,AH:x.AH}:null; }
+  function it(x){ return x?{blob:x.blob,w:x.w,h:x.h,conf:x.conf,score:x.score,manual:!!x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||''}:null; }
   return {id:s.id,num:s.num,ts:s.ts,mode:s.mode,flow:s.flow,phase:s.phase,saved:s.saved,target:s.target,nvid:s.videos.length||(s.videoLost?1:0),fronts:s.fronts.map(it),backs:s.backs.map(it)};
 }
 function persist(s){
@@ -873,7 +941,7 @@ async function restore(){
   var rows=await idbAll(), maxN=0;
   rows.sort(function(a,b){return a.ts-b.ts});
   rows.forEach(function(r){
-    function it(x){ if(!x||!x.blob) return null; return {blob:x.blob,url:URL.createObjectURL(x.blob),w:x.w,h:x.h,conf:x.conf,score:x.score,manual:x.manual,sec:x.sec,gray:x.gray,AH:x.AH}; }
+    function it(x){ if(!x||!x.blob) return null; return {blob:x.blob,url:URL.createObjectURL(x.blob),w:x.w,h:x.h,conf:x.conf,score:x.score,manual:x.manual,sec:x.sec,gray:x.gray,AH:x.AH,label:x.label||''}; }
     var s={id:r.id,num:r.num,ts:r.ts,mode:r.mode,flow:r.flow,phase:r.phase||'fronts',fronts:(r.fronts||[]).map(it),backs:(r.backs||[]).map(it),videos:[],
       sec:{fronts:1,backs:1},saved:!!r.saved,target:r.target||null,videoLost:r.nvid>0,ver:0,zip:null,zipP:null};
     if(count(s.fronts)+count(s.backs)===0) { idbDel(r.id); return; }
@@ -908,14 +976,17 @@ function prepZip(s,onp){
   if(s.zip) { if(onp) onp(1); return Promise.resolve(s.zip); }
   if(s.zipP) return s.zipP;
   var v=s.ver;
-  var files=[],man='Moose Cards Guided Scan v0.5 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
+  var files=[],man='Moose Cards Guided Scan v0.5.1 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
   var n=Math.max(s.fronts.length,s.backs.length);
   for(var i=0;i<n;i++){
     var f=s.fronts[i],b=s.backs[i];
     if(f&&f.blob) files.push({name:names(i,'front'),blob:f.blob});
     if(b&&b.blob) files.push({name:names(i,'back'),blob:b.blob});
-    man+='card '+pad(i+1)+': front '+(f?f.conf+(f.manual?' (manual)':''):'missed')+', back '+(b?b.conf+(b.manual?' (manual)':''):(s.backs.length?'missed':'none'))+'\n';
+    man+='card '+pad(i+1)+(f&&f.label?' ['+f.label.toUpperCase()+']':'')+': front '+(f?f.conf+(f.manual?' (manual)':''):'missed')+', back '+(b?b.conf+(b.manual?' (manual)':''):(s.backs.length?'missed':'none'))+'\n';
   }
+  var csv='card,label,front_file,back_file,front_quality\n';
+  for(var j=0;j<n;j++){ var ff=s.fronts[j],bb=s.backs[j]; csv+=(j+1)+','+((ff&&ff.label)||'')+','+(ff&&ff.blob?names(j,'front'):'')+','+(bb&&bb.blob?names(j,'back'):'')+','+(ff?ff.conf:'missed')+'\n'; }
+  files.push({name:'cards.csv',blob:new Blob([csv],{type:'text/csv'})});
   s.videos.forEach(function(x){man+='video: '+x.name+' (separate file)\n'});
   files.push({name:'manifest.txt',blob:new Blob([man],{type:'text/plain'})});
   var p=makeZip(files,onp).then(function(z){ if(s.ver===v){ s.zip=z; s.zipP=null; } return z; },function(e){ s.zipP=null; throw e; });
@@ -936,6 +1007,7 @@ function renderHome(){
     var st=sessStats(s), t2=st.f+' card'+(st.f===1?'':'s');
     if(st.look) t2+=' · '+st.look+' need a look';
     if(st.dups) t2+=' · '+st.dups+' maybe duplicate';
+    var lc=labelCounts(s); if(lc.n) t2+=' · '+lc.txt;
     t2+=' · '+(st.b?('backs '+st.b+' of '+s.fronts.length):(s.fronts.length?'backs to go':'no photos'));
     h+='<button class="srow" data-id="'+s.id+'"><div><div class="t1">Section '+s.num+'</div><div class="t2">'+t2+'</div></div><span class="st'+(s.saved?' ok':'')+'">'+(s.saved?'Saved ✓':'Not saved yet')+'</span></button>';
   });
@@ -1007,7 +1079,7 @@ function renderRev(){
     h+='<h3>'+pr[1]+' · '+count(l)+' of '+l.length+'</h3>';
     l.forEach(function(x,i){
       if(!x) h+='<button class="t ms" data-s="'+pr[0]+'" data-i="'+i+'">'+pr[1].slice(0,-1)+' '+(i+1)+'<br>missed<br>tap to fix</button>';
-      else h+='<button class="t'+(x.dup?' dp':(x.conf==='review'?' rv':''))+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(x.dup?'<i>Looks like a duplicate</i>':(x.conf==='review'?'<b>check</b>':''))+'</button>';
+      else h+='<button class="t'+(x.dup?' dp':(x.conf==='review'?' rv':''))+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(pr[0]==='fronts'&&x.label?'<u class="'+x.label+'">'+x.label+'</u>':'')+(x.dup?'<i>Looks like a duplicate</i>':(x.conf==='review'?'<b>check</b>':''))+'</button>';
     });
   });
   $('grid').innerHTML=h||'<p style="grid-column:1/5;color:#a79d86">Nothing captured yet.</p>';
@@ -1047,6 +1119,7 @@ function refreshSave(){
   else if(!CAN_REC) info+=" · This browser can't save video";
   if(s.saved) info+=' · Saved ✓';
   $('saveInfo').textContent=info;
+  if($('send').classList.contains('on')) refreshSend();
 }
 function cedUpdate(){
   var s=S.cur, v=Math.max(0,Math.min(60,parseInt($('cin').value,10)||0)), cur=s.fronts.length, h='', go=$('cedGo');
@@ -1058,7 +1131,8 @@ function cedUpdate(){
 $('cm').addEventListener('click',function(){ $('cin').value=Math.max(0,(parseInt($('cin').value,10)||0)-1); cedUpdate(); });
 $('cp').addEventListener('click',function(){ $('cin').value=Math.min(60,(parseInt($('cin').value,10)||0)+1); cedUpdate(); });
 $('cin').addEventListener('input',cedUpdate);
-function mergeInto(prev,x){            // keep the better photo in prev's slot
+function mergeInto(prev,x){
+  if(!prev.label&&x.label) prev.label=x.label;            // keep the better photo in prev's slot
   var better=x.manual&&!prev.manual?true:(!prev.manual&&(x.score>prev.score));
   if(better){ var old=prev.url; ['blob','url','w','h','conf','score','gray','AH','manual'].forEach(function(k){prev[k]=x[k]}); if(old) setTimeout(function(){URL.revokeObjectURL(old)},3000); }
   else if(x.url) setTimeout(function(){URL.revokeObjectURL(x.url)},3000);
@@ -1135,7 +1209,8 @@ $('nxHome').addEventListener('click',goHome);
 
 /* ---------- save to phone: share sheet when possible, else tap-links. Never navigates away. ---------- */
 function markSaved(s){ s.saved=true; persist(s); if(S.cur===s&&$('rev').classList.contains('on')) refreshSave(); }
-function saveToPhone(s,thenHome){
+function saveToPhone(s,thenHome){ return saveToPhone2(s,thenHome); }
+function saveToPhone2(s,thenHome){
   if(S.saveBusy) return;
   if(!s.zip){ toast('Getting your photos ready. One moment…',2200); return; }
   S.saveBusy=true; refreshSave();
@@ -1167,6 +1242,90 @@ function saveToPhone(s,thenHome){
   links(all,function(){finish()});
 }
 
+
+/* ---------- v0.5.1: flip-through review (labels) ---------- */
+function labelCounts(s){
+  var c={sell:0,keep:0,grade:0,n:0};
+  s.fronts.forEach(function(x){ if(x&&x.label&&c[x.label]!==undefined){c[x.label]++;c.n++} });
+  var t=[]; if(c.sell)t.push(c.sell+' sell'); if(c.keep)t.push(c.keep+' keep'); if(c.grade)t.push(c.grade+' grade');
+  c.txt=t.join(', '); return c;
+}
+var F={i:0,side:'front'};
+function flipCards(){ var s=S.cur; return s?Math.max(s.fronts.length,s.backs.length):0; }
+function openFlip(i,side){
+  if(!S.cur||!flipCards()){ toast('No cards to flip through yet.'); return; }
+  F.i=Math.max(0,Math.min(flipCards()-1,i||0)); F.side=side||'front';
+  $('viewer').classList.remove('on'); $('flipSec').textContent=S.cur.num; show('flip'); renderFlip();
+}
+function renderFlip(){
+  var s=S.cur; if(!s) return; var n=flipCards(), i=F.i;
+  var f=s.fronts[i], b=s.backs[i], x=F.side==='front'?f:b;
+  $('flipN').textContent='Card '+(i+1)+' of '+n;
+  $('fsF').classList.toggle('on',F.side==='front'); $('fsB').classList.toggle('on',F.side==='back');
+  var im=$('flipImg'), ms=$('flipMiss');
+  if(x&&x.url){ im.src=x.url; im.style.display='block'; ms.style.display='none'; }
+  else{ im.removeAttribute('src'); im.style.display='none'; ms.style.display='block';
+    ms.textContent=F.side==='front'?'This front was missed. Tap All cards, then tap its empty slot to capture it.':(s.backs.length?'This back was missed.':'No backs scanned yet. Tap All cards, then Scan the backs.'); }
+  var lb=(f&&f.label)||''; var tg=$('flipTag'); tg.className=lb; tg.textContent=lb?lb.toUpperCase():'';
+  [].forEach.call($('flipLbl').querySelectorAll('button'),function(bt){ bt.classList.toggle('on',bt.dataset.l===lb); bt.disabled=!f; });
+  computeDups(s.fronts); $('flipDup').style.display=(F.side==='front'&&f&&f.dup)?'block':'none';
+  $('fPrev').disabled=i<=0; $('fNext').disabled=i>=n-1;
+}
+function flipGo(d){ var n=flipCards(),j=F.i+d; if(j<0||j>=n) return; F.i=j; renderFlip(); }
+$('fPrev').addEventListener('click',function(){flipGo(-1)});
+$('fNext').addEventListener('click',function(){flipGo(1)});
+$('fsF').addEventListener('click',function(){F.side='front';renderFlip()});
+$('fsB').addEventListener('click',function(){F.side='back';renderFlip()});
+$('flipImg').addEventListener('click',function(){F.side=F.side==='front'?'back':'front';renderFlip()});
+$('flipLbl').addEventListener('click',function(e){
+  var bt=e.target.closest('button'); if(!bt||bt.disabled) return;
+  var f=S.cur.fronts[F.i]; if(!f) return; var l=bt.dataset.l;
+  f.label=(f.label===l)?'':l; touch(S.cur); renderFlip();
+  toast(f.label?('Card '+(F.i+1)+': '+f.label+'.'):('Card '+(F.i+1)+': label cleared.'),1400);
+});
+(function(){
+  var st=$('flipStage'),x0=null,y0=null;
+  st.addEventListener('touchstart',function(e){ var t=e.changedTouches[0]; x0=t.clientX; y0=t.clientY; },{passive:true});
+  st.addEventListener('touchend',function(e){ if(x0===null) return; var t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0; x0=null;
+    if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){ flipGo(dx<0?1:-1); if(e.cancelable) e.preventDefault(); } },{passive:false});
+  document.addEventListener('keydown',function(e){ if(!$('flip').classList.contains('on')) return; if(e.key==='ArrowRight') flipGo(1); else if(e.key==='ArrowLeft') flipGo(-1); });
+})();
+$('flipGrid').addEventListener('click',function(){ openReview(S.cur); });
+$('flipSend').addEventListener('click',function(){ openSend(S.cur); });
+$('nxFlip').addEventListener('click',function(){ openFlip(0,'front'); });
+$('nxSend').addEventListener('click',function(){ openSend(S.cur); });
+
+/* ---------- v0.5.1: Send ---------- */
+function mailBody(s){
+  var n=Math.max(s.fronts.length,s.backs.length), t='Guided Scan, Section '+s.num+'\n'+count(s.fronts)+' cards\n\n';
+  for(var i=0;i<n;i++){ var f=s.fronts[i]; t+=(i+1)+'. '+(f&&f.label?f.label.toUpperCase():'(no label)')+(f?'':' - front missed')+'\n'; }
+  t+='\nThe photos are not attached. Tap Share in the app, then attach the zip (moose-cards-section-'+s.num+'.zip).';
+  return t;
+}
+function mailHref(s){
+  var subj='Card scan, Section '+s.num+' ('+count(s.fronts)+' cards)', body=mailBody(s);
+  if(body.length>1500) body=body.slice(0,1450)+'\n...\n(List cut short. See cards.csv in the zip.)';
+  return 'mailto:?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+}
+function openSend(s){
+  if(s&&s!==S.cur) loadSession(s); s=S.cur; if(!s) return;
+  $('sendSec').textContent=s.num; var lc=labelCounts(s), n=count(s.fronts);
+  $('sendSum').innerHTML='<b>'+n+'</b> card'+(n===1?'':'s')+(lc.n?' · '+lc.txt:' · no labels yet')+(s.backs.length?' · backs '+count(s.backs):' · no backs yet');
+  $('sdMail').href=mailHref(s);
+  $('sendInfo').textContent='Everything stays on your phone. Email can only carry the card list, so use Share to send the photos.'+((!s.videos.length&&s.videoLost)?" The video isn't kept after you close the page.":'');
+  show('send'); refreshSend();
+}
+function refreshSend(){
+  var s=S.cur; if(!s) return; var b=$('sdShare');
+  if(S.saveBusy){ b.disabled=true; return; }
+  if(!s.zip){ b.disabled=true; b.firstChild.textContent='Getting ready…'; (s.zipP||prepZip(s)).then(function(){ if(S.cur===s&&$('send').classList.contains('on')) refreshSend(); },function(){}); }
+  else{ b.disabled=false; b.firstChild.textContent='Share'; }
+}
+$('sdShare').addEventListener('click',function(){ saveToPhone2(S.cur,false); });
+$('sdMail').addEventListener('click',function(){ $('sdMail').href=mailHref(S.cur); toast('Opening your email…',2200); });
+$('sdColl').addEventListener('click',function(){ toast('Coming soon. Nothing leaves your phone yet.',3000); });
+$('sdBack').addEventListener('click',function(){ openReview(S.cur); });
+
 /* ---------- leaving the page ---------- */
 window.addEventListener('beforeunload',function(e){
   var risk=S.state==='scanning'||S.state==='stopping'||S.sessions.some(function(s){ return !isEmpty(s)&&!s.saved&&(!S.db||s.videos.length); });
@@ -1183,7 +1342,7 @@ $('go').addEventListener('click',async function(){
   try{ await ensureCam(); }catch(e){ $('err').textContent=friendlyErr(e); S.busy=false; return; }
   S.busy=false; createSession(); goCam('Fit one card inside the frame, then tap Start sweep.',4000);
 });
-window.__scan=S; window.__sim=simSAD; window.__dbg={simSAD:simSAD}; window.__render=renderRev; // for testing
+window.__scan=S; window.__sim=simSAD; window.__dbg={simSAD:simSAD}; window.__render=renderRev; window.__flip=openFlip; // for testing
 (async function init(){
   S.db=await idbOpen();
   try{ await restore(); }catch(e){}
