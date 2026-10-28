@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10.3 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.10.4 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -842,7 +842,7 @@ function renderNM(first){
   updateRd();
   if(!first) $('nmBody').scrollTop=0;
 }
-function renderNMForm(c,first){ var y=$('nmBody').scrollTop, ae=document.activeElement, ak=ae&&ae.dataset&&ae.dataset.k&&$('nmForm').contains(ae)?ae.dataset.k:null, av=ak?ae.value:null; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond'],function(){}); if(ak&&!first){ var ni=$('nmForm').querySelector('[data-k="'+ak+'"]'); if(ni){ ni.value=av; } } try{ renderNMHelp(c); }catch(e){ log('help render: '+e.message); } if(!first) $('nmBody').scrollTop=y; }
+function renderNMForm(c,first){ var y=$('nmBody').scrollTop, ae=document.activeElement, ak=ae&&ae.dataset&&ae.dataset.k&&$('nmForm').contains(ae)?ae.dataset.k:null, av=ak?ae.value:null; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond'],function(){}); if(ak&&!first){ var ni=$('nmForm').querySelector('[data-k="'+ak+'"]'); if(ni){ ni.value=av; try{ var sp=ae.selectionStart,se=ae.selectionEnd; ni.focus(); ni.setSelectionRange(sp,se); }catch(x){} } } try{ renderNMHelp(c); }catch(e){ log('help render: '+e.message); } if(!first) $('nmBody').scrollTop=y; }
 function drawNMPhoto(c){
   var blob=N.side==='front'?(c.front||c.back):(c.back||c.front);
   $('nmImg').src=urlOf(blob); $('nmFl').textContent=(N.side==='front'?'Front':'Back')+((c.back&&c.front)?' · tap to flip':'');
@@ -873,15 +873,27 @@ function finishNM(){
    What it is sure of is filled in and marked "check this". Everything else becomes big tap targets next to the field. Nothing leaves this device. */
 function HP(){ if(!N.help) N.help={}; return N.help; }
 function v10ok(){ return !!(window.CardRead&&window.CardGuess&&window.CardSerial&&window.CardText&&window.CardOCR); }
+function readSrc(c,side){ var cl=cleanOf(c,side); return cl&&cl.blob?cl.blob:(c[side]||null); }
+function hpPaint(id){ var st=HP()[id]; if(!st||!st.busy||N.ids[N.i]!==id) return; var e=$('hpStep'); if(e) e.textContent=st.step||''; var bar=$('hpBar'); if(bar) bar.style.width=Math.round(100*Math.min(.98,st.frac||0))+'%'; var t=$('hpEl'); if(t) t.textContent=Math.round((Date.now()-st.t0)/1000)+' s'; var l=$('hpLong'); if(l) l.hidden=!(Date.now()-st.t0>20000); }
+/* v0.10.4: the Moose Reader runs in a Web Worker (through AppReader). The quick first read is already on screen; this adds the closer look in the background.
+   Skip stops it at once. If the reader does not load or runs past the time limit, the built-in reader takes over. */
 async function readCloser(c,words){
-  var rd=N.rd, id=c.id, st=HP()[id]={busy:true,step:'Starting…',t0:Date.now()}; var cur=function(){ return N.ids[N.i]===id; };
-  var extra=(words||[]).filter(function(w){ return /[A-Za-z]{3}/.test(w.t); }).map(function(w){ return {t:w.t,c:w.c,src:'v9'}; });
+  var rd=N.rd, id=c.id, st=HP()[id]={busy:true,step:'Starting…',frac:.02,t0:Date.now()}; var cur=function(){ return N.ids[N.i]===id; };
+  var gone=function(){ return rd.stop||(N.ids[N.i]!==id&&N.i>N.ids.indexOf(id)); };
   if(cur()) renderNMHelp(c);
+  var tick=setInterval(function(){ hpPaint(id); },1000);
   try{
-    var res=await CardRead.run(c,{fast:true,extraFrags:extra,shouldStop:function(){ return rd.stop||(N.ids[N.i]!==id&&N.i>N.ids.indexOf(id)); },step:function(m){ st.step=m; if(cur()){ var e=$('hpStep'); if(e) e.textContent=m; } }});
-    if(rd.stop||(N.ids[N.i]!==id&&N.i>N.ids.indexOf(id))){ HP()[id]={aborted:true}; return false; }
-    st.res=res; st.busy=false; applyCloser(c,res); c.ocr10=Date.now(); saveCard(c); log('closer '+id+': '+(res.ms)+' ms, serial '+(res.serial&&res.serial.fill||'-')+', brand '+(res.brand.fill||'-')+', name '+(res.nameFill||'-'));
+    var r=await AppReader.closer(c,{src:readSrc(c,'front'),backSrc:readSrc(c,'back'),words:words||[],shouldStop:function(){ return gone()||st.skip; },step:function(m){ st.step=m; hpPaint(id); },progress:function(p){ if(p.fallback){ st.fb=1; st.frac=.05; } else if(p.frac!=null) st.frac=Math.max(st.frac,p.frac); hpPaint(id); }});
+    if(st.skip){ st.busy=false; st.skipped=true; log('closer '+id+': skipped'); }
+    else if(gone()||r.aborted){ HP()[id]={aborted:true}; return false; }
+    else if(!r.res){ st.busy=false; st.err=(r.failed&&r.failed.message)||'no reader'; log('closer fail '+id+': '+st.err); }
+    else {
+      var res=r.res; st.res=res; st.busy=false; st.engine=r.engine; st.fell=r.fellBack||''; st.timedOut=!!r.timedOut; st.partial=!!r.partial; st.ms=Date.now()-st.t0;
+      applyCloser(c,res); c.ocr10=Date.now(); saveCard(c); (rd.times=rd.times||{})[id]=st.ms;
+      log('closer '+id+': '+st.ms+' ms ['+r.engine+(st.fell?', fell back: '+st.fell:'')+(st.partial?', partial':'')+'], serial '+(res.serial&&res.serial.fill||'-')+', brand '+(res.brand.fill||'-')+', name '+(res.nameFill||'-'));
+    }
   }catch(e){ st.busy=false; st.err=String(e&&e.message||e); log('closer fail '+id+': '+st.err); }
+  finally{ clearInterval(tick); }
   if(cur()){ renderNMForm(c); updateRd(); }
   return true;
 }
@@ -904,9 +916,12 @@ function renderNMHelp(c){
   var needSer=(!c.serial||g.serial)&&!c.noSerial, needBrand=!c.brand||g.brand, needName=!c.player||g.player;
   /* top: status, draw-a-box, from your cards, links, back photo */
   var h='';
-  if(st.busy) h+='<div class="hpBusy"><span class="hpSpin"></span><div><b>Looking closer at this card…</b><small id="hpStep">'+esc(st.step||'')+'</small></div></div>';
+  if(st.busy) h+='<div class="hpBusy rdB"><span class="hpSpin"></span><div class="rdT"><b>'+(st.fb?'Using the built-in reader…':'Looking closer at this card…')+'</b><small id="hpStep">'+esc(st.step||'')+'</small><div class="rdBar" role="progressbar" aria-label="Reading progress"><i id="hpBar" style="width:'+Math.round(100*Math.min(.98,st.frac||0))+'%"></i></div><small class="rdKeep">You can keep going now: tap a chip, type the name, or draw a box. <span id="hpEl"></span></small><small id="hpLong" hidden>This is taking a while on this phone. I will stop and use the built-in reader soon.</small></div><button type="button" class="hpc rdSkip" data-hp="skipc">Skip</button></div>';
+  else if(st.skipped) h+='<div class="pvnote">Skipped. Tap “Look closer” any time, or use the tools below.</div>';
   else if(st.err) h+='<div class="pvnote">The closer look did not finish on this device. You can still use the tools below.</div>';
-  else if(!res&&!c.ocr10&&v10ok()&&(c.ocrTs||c.ocrFail||c.edited)) h+='<div class="hpRow"><button type="button" class="hpb" data-hp="closer">🔎 Look closer at this card</button></div>';
+  if(st.res&&st.res.fellBack&&!st.busy) h+='<div class="pvnote">'+(st.res.fellBack==='timeout'?'The close reader was too slow on this phone, so I used the built-in reader.':'The close reader would not start, so I used the built-in reader.')+' The tools below still work.</div>';
+  else if(st.res&&st.res.partial&&!st.busy) h+='<div class="pvnote">I ran out of time, so this is a partial look. The tools below still work.</div>';
+  if(!st.busy&&!res&&!c.ocr10&&v10ok()&&(c.ocrTs||c.ocrFail||c.edited)) h+='<div class="hpRow"><button type="button" class="hpb" data-hp="closer">🔎 Look closer at this card</button></div>';
   h+='<div class="hpRow"><button type="button" class="hpb gold" data-hp="box">✏️ Draw a box on the photo to read it</button></div>';
   var fc=res&&res.fromCatalog||[]; if(fc.length&&(needName||needBrand)){
     h+='<div class="hpBlk"><div class="hpT">From your cards <small>you saved these before</small></div><div class="hpRow">'+fc.map(function(e,i){ return hpChip('wide','data-cat',i,e.player+' · '+[e.year,e.brand].filter(Boolean).join(' ')+(e.team?' · '+e.team.replace(/^.*\s/,''):'')+(e.den?' · /'+e.den:'')); }).join('')+'</div></div>'; }
@@ -920,7 +935,7 @@ function renderNMHelp(c){
   function after(key,html){ var old=form.querySelector('.hpAt[data-at="'+key+'"]'); if(old) old.remove(); if(!html) return; var inp=form.querySelector('[data-k="'+key+'"]'); var fld=inp&&inp.closest('.fld'); if(!fld) return; var d=document.createElement('div'); d.className='hpAt'; d.dataset.at=key; d.innerHTML=html; fld.appendChild(d); }
   /* name */
   var nm='';
-  if(needName&&res&&res.names.length){ var seen={}; var chips=res.names.filter(function(n){ var t=n.name+n.jr; if(seen[t]||t===c.player) return false; seen[t]=1; return n.n>=2&&n.name.split(' ')[1].length>=4; }).slice(0,2);
+  if(needName&&res&&res.names.length){ var seen={}; var chips=res.names.filter(function(n){ var t=n.name+n.jr; if(seen[t]||t===c.player) return false; seen[t]=1; return n.n>=2&&(n.name.split(' ')[1]||'').length>=4; }).slice(0,2);
     if(chips.length) nm='<div class="hpT">Is it one of these? <small>tap if right</small></div><div class="hpRow">'+chips.map(function(n){ return hpChip('','data-nm',n.name+n.jr,n.name+n.jr); }).join('')+'</div>'; }
   after('player',nm);
   /* brand */
@@ -958,6 +973,7 @@ $('nmR').addEventListener('click',function(e){
   if(d.hp==='numbered'){ c.noSerial=false; saveCard(c); renderNMForm(c); return; }
   if(d.hp==='noback'){ c.backAsked=1; saveCard(c); renderNMHelp(c); return; }
   if(d.hp==='back'){ $('nmBackFile').click(); return; }
+  if(d.hp==='skipc'){ var sk=HP()[c.id]; if(sk&&sk.busy){ sk.skip=true; if(window.AppReader) AppReader.cancel(); } return; }
   if(d.hp==='closer'){ if(!v10ok()){ MC().toast('The reader files are missing.'); return; } if(window.CardOCR) CardOCR.init(function(){}).then(function(){ readCloser(c,[]); }); return; }
   if(d.nm){ setF('player',d.nm); renderNMForm(c); return; }
   if(d.br){ setF('brand',d.br); st.yearFor=null; var S=setByName(c); if(S&&S[4]&&S[4].length&&!c.year){ st.yearFor={years:S[4]}; HP()[c.id]=st; } renderNMForm(c); return; }
@@ -1013,13 +1029,36 @@ function closeBox(){ if(!BX.c) return; BX.tok++; $('bxOv').hidden=true; if($('kp
   function end(e){ if(!p0) return; var b=BX.box; p0=null; if(!b||(b[2]-b[0])<.03||(b[3]-b[1])<.02){ BX.box=null; rect.style.display='none'; $('bxRes').innerHTML='<div class="pvnote">That box is too small. Drag a bit larger, around the whole word or number.</div>'; return; } bxRead(); }
   st.addEventListener('pointerup',end); st.addEventListener('pointercancel',end);
 })();
+/* v0.10.4: a drawn box goes to the Moose Reader (its own worker, so it never waits behind a full read); the built-in box reader is the fallback */
+function bxSerialOK(v){ var m=/^(\d{1,4})\s*\/\s*(\d{1,4})$/.exec(String(v).trim()); if(!m) return false; try{ return window.CardSerial&&CardSerial.plausible?CardSerial.plausible(+m[1],+m[2]):(+m[1]<=+m[2]&&+m[2]>=2); }catch(e){ return true; } }
+function bxReaderChips(rr,kind,c){
+  var out=[], seen={}; function add(v){ v=String(v||'').trim(); var k=v.toLowerCase(); if(!v||seen[k]) return; seen[k]=1; out.push(v); }
+  ((rr&&rr.candidates)||[]).slice().sort(function(a,b){ return (b.confidence||0)-(a.confidence||0); }).forEach(function(x){
+    var v=String(x.value==null?'':x.value).trim(); if(!v) return;
+    if(kind==='serial'){ if(bxSerialOK(v)) add(v.replace(/\s+/g,'')); }
+    else if(kind==='name'){ if(v.replace(/[^A-Za-z]/g,'').length>=4) add(v); }
+    else { var bn=window.AppReader&&AppReader._brandName?AppReader._brandName(v):{name:v}; if(v.replace(/[^A-Za-z]/g,'').length>=3) add(bn.name); } });
+  return out.slice(0,4);
+}
 async function bxRead(){
-  var c=BX.c, box=BX.box, kind=BX.kind, tok=++BX.tok; if(!box||!c) return; var res=$('bxRes'); res.innerHTML='<div class="hpBusy"><span class="hpSpin"></span><div><b>Reading just this box…</b><small>a few seconds</small></div></div>';
+  var c=BX.c, box=BX.box, kind=BX.kind, tok=++BX.tok; if(!box||!c) return; var res=$('bxRes'); res.innerHTML='<div class="hpBusy"><span class="hpSpin"></span><div><b>Reading just this box…</b><small>a few seconds. You can drag a new box any time.</small></div></div>';
+  var blob=BX.side==='back'?c.back:(c.front||c.back), crop='', im=null, h='', t0=Date.now();
   try{
+    try{ if(window.CardOCR){ await CardOCR.init(function(){}); im=await CardOCR.loadImg(blob); crop=CardRead.cropToURL(im,box,.01,640); if(tok===BX.tok) res.innerHTML='<img class="hpCrop" alt="What I looked at" src="'+crop+'"><div class="hpBusy"><span class="hpSpin"></span><div><b>Reading just this box…</b><small>a few seconds</small></div></div>'; } }catch(e){}
+    var rr=null; if(window.AppReader){ try{ rr=await AppReader.readRegion(blob,box,{kind:kind==='serial'?'serial':(kind==='name'?'name':'text'),shouldStop:function(){ return tok!==BX.tok; }}); }catch(e){ rr=null; } }
+    if(tok!==BX.tok) return;
+    var chips=(rr&&rr.engine==='moose-reader')?bxReaderChips(rr,kind,c):[]; window.__bxLast={engine:rr&&rr.engine,chips:chips,ms:Date.now()-t0};
+    if(chips.length){
+      h=(crop?'<img class="hpCrop" alt="What I looked at" src="'+crop+'">':'')+'<div class="hpT">I think it says <small>check this against the picture</small></div><div class="hpRow">'+chips.map(function(k){ return hpChip('big','data-bs',k,k); }).join('')+'</div>';
+      if(kind==='serial') h+='<div class="hpRow"><button type="button" class="hpc big key" data-bx="kp">⌨ Type it</button><button type="button" class="hpc big" data-bx="nn">Not numbered</button></div>';
+      else h+='<div class="hpT">Or type it</div><div class="hpRow"><input type="text" id="bxTxt" autocomplete="off" autocapitalize="words" placeholder="'+(kind==='name'?'Player name':'Set name')+'" value="'+esc(chips[0]||'')+'"><button type="button" class="hpc big ok" data-bx="use">Use this</button></div>';
+      res.innerHTML=h; return;
+    }
+    /* nothing from the new reader (or it could not run): the built-in box reader */
     if(!v10ok()) throw new Error('The reader files are missing');
-    await CardOCR.init(function(){}); var blob=BX.side==='back'?c.back:(c.front||c.back), im=await CardOCR.loadImg(blob);
-    var crop=CardRead.cropToURL(im,box,.01,640), reads=await CardText.readBox(im,box,kind==='serial'?'serial':'text',{});
-    if(tok!==BX.tok) return; var h='<img class="hpCrop" alt="What I looked at" src="'+crop+'">';
+    if(!im){ await CardOCR.init(function(){}); im=await CardOCR.loadImg(blob); crop=CardRead.cropToURL(im,box,.01,640); }
+    var reads=await CardText.readBox(im,box,kind==='serial'?'serial':'text',{});
+    if(tok!==BX.tok) return; h='<img class="hpCrop" alt="What I looked at" src="'+crop+'">';
     if(kind==='serial'){
       var votes=[]; reads.forEach(function(r){ r.lines.concat([r.lines.join('')]).forEach(function(ln){ String(ln).split(/\s+/).forEach(function(tk){ CardSerial._parseSerial(tk).forEach(function(x){ if(CardSerial.plausible(x.num,x.den)) votes.push(x.num+'/'+x.den); }); }); }); });
       var cnt={}; votes.forEach(function(v){ cnt[v]=(cnt[v]||0)+1; }); var ks=Object.keys(cnt).sort(function(a,b){ return cnt[b]-cnt[a]; }).slice(0,4);
@@ -1063,22 +1102,47 @@ function readLow(r){
 function applyFields(c,r){
   c.guess=c.guess||{}; var f=r.fields, n=0, got=[]; c.noAuto=c.noAuto||{};
   function take(k,v){ if(v===''||v==null) return; if((c[k]===''||c[k]==null)&&!c.noAuto[k]){ c[k]=(k==='year'?+v:v); c.guess[k]=1; n++; got.push(k); } }
-  ['player','team','year','brand','number','serial'].forEach(function(k){ var x=f[k]; if(!x||x.value===''||x.value==null||(x.confidence||0)<.6) return; var v=x.value; if(k==='player'&&window.CardAuto) v=CardAuto.okName(v); take(k,v); });
+  ['player','team','year','brand','number','serial'].forEach(function(k){ var x=f[k]; if(!x||x.value===''||x.value==null||(x.confidence||0)<(r.engine==='moose-reader'?.5:.6)) return; var v=x.value; if(k==='player'&&window.CardAuto) v=CardAuto.okName(v); take(k,v); });
   ['auto','rookie'].forEach(function(k){ if(f[k]&&f[k].value&&(f[k].confidence||0)>=.6&&!c[k]){ c[k]=true; c.guess.flags=1; n++; got.push(k); } });
   var low=readLow(r); c.ocrLow=low;
   try{ if(window.CardAuto){ var ra=CardAuto.run(c,{low:low,names:(r.legacy&&r.legacy.names)||[]}); n+=ra.n; ra.fields.forEach(function(k){ if(got.indexOf(k)<0) got.push(k); }); } }catch(e){ log('auto: '+e.message); }
   c.ocrTs=Date.now(); c.ocrN=(c.ocrN||0)+n; if(n){ c.upd=Date.now(); } saveCard(c); return got;
 }
+var LS_BUSY=null;
+function lsKeep(fn){ var nm0=$('lsNm')?$('lsNm').value:null, ae=document.activeElement, key=null, sp=null, se=null; if(ae&&$('lsBody')&&$('lsBody').contains(ae)){ key=ae.id?('#'+ae.id):(ae.dataset&&ae.dataset.k?('[data-k="'+ae.dataset.k+'"]'):null); try{ sp=ae.selectionStart; se=ae.selectionEnd; }catch(e){} } fn(); var nm1=$('lsNm'); if(nm1&&nm0&&!nm1.value){ nm1.value=nm0; nm1.dispatchEvent(new Event('input',{bubbles:true})); } if(key){ var n=$('lsBody').querySelector(key); if(n){ try{ n.focus(); if(sp!=null) n.setSelectionRange(sp,se); }catch(e){} } } }
+function lsPaint(){ var b=LS_BUSY; if(!b) return; var e=$('rdStep'); if(e) e.textContent=b.step||''; var bar=$('rdBar'); if(bar) bar.style.width=Math.round(100*Math.min(.98,b.frac||0))+'%'; var t=$('rdEl'); if(t) t.textContent=Math.round((Date.now()-b.t0)/1000)+' s'; var l=$('rdLong'); if(l) l.hidden=!(Date.now()-b.t0>20000); }
+function fieldsO(f,o,got){
+  o=o||{players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[]};
+  function add(a,b,n){ b.forEach(function(v){ if(a.indexOf(v)<0) a.push(v); }); a.length=Math.min(a.length,n); }
+  add(o.players,candList(f,'player',.15).filter(function(v){ return /^[A-Za-z][A-Za-z .'\-]{3,}$/.test(String(v)); }),5);
+  add(o.years,candList(f,'year',.2),4); add(o.teams,candList(f,'team',.2),4); add(o.serials,candList(f,'serial',.15),4); add(o.numbers,candList(f,'number',.2),4); add(o.brands,candList(f,'brand',.15),4);
+  ['rookie','auto','relic'].forEach(function(k){ if(f[k]&&f[k].value&&o.flags.indexOf(k)<0) o.flags.push(k); });
+  (got||[]).forEach(function(k){ if(o.got.indexOf(k)<0) o.got.push(k); }); return o;
+}
+/* v0.10.4: the quick first read shows at once; the Moose Reader (in a Web Worker) adds the closer look; Skip stops it; the built-in reader is the fallback */
 async function readFull(c,outId){
   if(!window.AppReader) throw new Error('the reader files are missing');
-  var out=$(outId||'lsOcr'); if(out&&window.CardOCR&&!CardOCR.state.ready) out.innerHTML='<small>Getting the reader ready (about 7 MB, once)…</small>';
-  if(LS_AB){ try{ LS_AB.abort(); }catch(e){} } LS_AB=window.AbortController?new AbortController():null;
-  var r=await AppReader.read(c.front||c.back,{backImage:c.back||null,sport:c.sport||'Baseball',signal:LS_AB&&LS_AB.signal,onProgress:function(m){ var e=$(outId||'lsOcr'); if(e&&!e.querySelector('.lsHelp')) e.innerHTML='<small>'+esc(m)+' Your photo stays on this phone.</small>'; }});
-  if(r.aborted) return null;
-  var got=applyFields(c,r), f=r.fields, o={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:got};
-  o.players=candList(f,'player',.15).filter(function(v){ return /^[A-Za-z][A-Za-z .'\-]{3,}$/.test(String(v)); }).slice(0,5);
-  o.years=candList(f,'year',.2).slice(0,4); o.teams=candList(f,'team',.2).slice(0,4); o.serials=candList(f,'serial',.15).slice(0,4); o.numbers=candList(f,'number',.2).slice(0,4); o.brands=candList(f,'brand',.15).slice(0,4);
-  ['rookie','auto','relic'].forEach(function(k){ if(f[k]&&f[k].value) o.flags.push(k); });
+  if(LS_AB){ try{ LS_AB.abort(); }catch(e){} } LS_AB=window.AbortController?new AbortController():null; var ab=LS_AB, sig=ab&&ab.signal;
+  var busy=LS_BUSY={c:c.id,t0:Date.now(),step:'Starting…',frac:.02,skip:false}, o=null, partialDone=false;
+  var src=readSrc(c,'front')||readSrc(c,'back'), bsrc=(c.front&&c.back)?readSrc(c,'back'):null, sport=c.sport||'Baseball';
+  var tick=setInterval(lsPaint,1000);
+  var stop=function(){ return busy.skip||(sig&&sig.aborted); };
+  if(window.CardOCR&&!CardOCR.state.ready) busy.step='Getting the reader ready (about 7 MB, once)…';
+  lsKeep(function(){ showOcr(c,LS_O||fieldsO({},null,[])); });
+  /* 1) the quick first read, shown straight away */
+  var quickP=AppReader.quick(src,{sport:sport,shouldStop:stop}).then(function(q){
+    if(stop()||!q||q.empty) return; var got=applyFields(c,q); o=fieldsO(q.fields,null,got); LS_O=o; partialDone=!!got.length; busy.q=q;
+    lsKeep(function(){ renderLS(); showOcr(byId(L.id)||c,LS_O); }); log('ls first pass: '+(got.join(',')||'nothing filled')); }).catch(function(e){ log('ls quick fail: '+(e&&e.message||e)); });
+  /* 2) the closer look, in the worker */
+  var r=await AppReader.read(src,{backImage:bsrc,sport:sport,signal:sig,shouldStop:stop,onProgress:function(p){ if(p.fallback){ busy.fb=1; busy.frac=.05; } if(p.text) busy.step=p.text; if(p.frac!=null) busy.frac=Math.max(busy.frac,p.frac); lsPaint(); }});
+  await quickP; clearInterval(tick);
+  var ms=Date.now()-busy.t0; LS_BUSY=null;
+  if(busy.skip){ log('ls read skipped after '+ms+' ms'); var oo=o||fieldsO({},null,[]); oo.note='Skipped. '+(partialDone?'The quick read stays. ':'')+'Tap “Try reading the card for me” to run it again.'; return oo; }
+  if(r.aborted||(sig&&sig.aborted)) return null;
+  var got=applyFields(c,r); o=fieldsO(r.fields,o,got); o.engine=r.engine; o.ms=ms; o.fell=r.fellBack||''; o.partial=!!r.partial;
+  if(o.fell) o.note=(o.fell==='timeout'?'The close reader was too slow on this phone, so I used the built-in reader.':(o.fell==='empty'?'The close reader found nothing, so I also tried the built-in reader.':'The close reader would not start, so I used the built-in reader.'))+' The tools here still work.';
+  else if(o.partial) o.note='I ran out of time, so this is a partial look. The tools here still work.';
+  window.__lsLast={engine:r.engine,ms:ms,fell:o.fell,partial:o.partial}; log('ls read '+ms+' ms ['+r.engine+(o.fell?', fell back: '+o.fell:'')+'] filled '+(got.join(',')||'nothing'));
   return o;
 }
 var FLD_NAME={player:'player',team:'team',year:'year',brand:'set',number:'card number',serial:'serial number',sport:'sport',auto:'autograph',rookie:'rookie'};
@@ -1118,7 +1182,7 @@ function renderLS(){
   var c=byId(L.id); if(!c){ MC().show('cd'); return; } var y=$('lsBody').scrollTop; ensureDrafts(c);
   $('lsIntro').textContent='A draft for you to review and edit. Nothing is sent anywhere, and no price is suggested. Anything marked “check this” was guessed. Tap the badge once you have checked it.';
   $('lsTop').innerHTML='<div class="lscard"><img src="'+urlOf(lsPhoto(c))+'" alt=""><div><b>'+esc(cardTitle(c))+'</b><span id="lsChk"></span>'+(hasClean(c)?'<small>Using your cleaned photos. Your originals are kept.</small>':'<small>Tip: “Clean up photo” on the card makes straighter photos for a listing.</small>')+'</div></div>'+
-    '<button class="ghost-btn dbtn2" id="lsRead">✨ Try reading the card for me<small>Optional. Reads the photo on this phone and suggests names, year, set, serial number and more. Anything you tap is marked “check this”.</small></button><div id="lsOcr"></div>';
+    '<button class="ghost-btn dbtn2" id="lsRead"'+(LS_BUSY?' disabled':'')+'>✨ Try reading the card for me<small>Optional. Reads the photo on this phone and suggests names, year, set, serial number and more. Anything you tap is marked “check this”.</small></button><div id="lsOcr"></div>';
   buildForm($('lsForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond','condNotes','flaws','flawText'],function(k){ lsSaved(); lsChk(c); });
   $('lsTextH').style.display='block';
   buildForm($('lsText'),c,['title','desc','price'],function(){ lsSaved(); });
@@ -1129,7 +1193,7 @@ function renderLS(){
 }
 function lsSaved(){ var el=$('lsSaved'); if(el) el.textContent='Saved ✓'; }
 $('lsBack').addEventListener('click',function(){ lsLeave(); });
-function lsLeave(){ flush(); MC().show('cd'); renderCD(); }
+function lsLeave(){ if(LS_BUSY){ LS_BUSY.skip=true; try{ AppReader.cancel(); }catch(e){} } flush(); MC().show('cd'); renderCD(); }
 $('lsTop').addEventListener('click',async function(e){
   var c=byId(L.id); if(!c) return;
   if(e.target.closest('#lsAllOk')){ c.guess={}; c.edited=true; saveCard(c); renderLS(); return; }
@@ -1138,9 +1202,9 @@ $('lsTop').addEventListener('click',async function(e){
     else setGuess(c,k,v==='' ?'':(k==='year'?+v:v));
     if(k==='grader'||k==='grade'||k==='cert'){ c.cond='graded'; saveCard(c); }
     renderLS(); showOcr(c,LS_O); return; }
-  if(e.target.closest('#lsRead')){ var btn=$('lsRead'); if(btn.disabled) return; btn.disabled=true; var out=$('lsOcr'); out.innerHTML='<small>Reading this card on your phone… your photo is not uploaded.</small>';
-    try{ var o=await readFull(c,'lsOcr'); if(o){ LS_O=o; renderLS(); showOcr(byId(L.id)||c,LS_O); log('ls ocr ok '+o.got.join(',')); } }
-    catch(er){ log('ls ocr fail: '+(er&&er.message||er)); LS_O={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[],failed:true}; renderLS(); showOcr(byId(L.id)||c,LS_O); }
+  if(e.target.closest('#lsRead')){ var btn=$('lsRead'); if(btn.disabled||LS_BUSY) return; btn.disabled=true;
+    try{ var o=await readFull(c,'lsOcr'); if(o){ LS_O=o; lsKeep(function(){ renderLS(); showOcr(byId(L.id)||c,LS_O); }); log('ls ocr ok '+o.got.join(',')); } }
+    catch(er){ LS_BUSY=null; log('ls ocr fail: '+(er&&er.message||er)); LS_O={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[],failed:true}; renderLS(); showOcr(byId(L.id)||c,LS_O); }
     var b2=$('lsRead'); if(b2) b2.disabled=false; return; }
   var ls=e.target.closest('[data-ls]'); if(ls){ lsHelp(c,ls); return; }
 });
@@ -1149,6 +1213,7 @@ $('lsTop').addEventListener('input',function(e){ if(e.target.id!=='lsNm') return
 function lsAfterName(c){ try{ if(window.CardAuto) CardAuto.run(c,{},{noRead:true}); }catch(e){} saveCard(c); renderLS(); showOcr(byId(L.id)||c,LS_O||{players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[],got:[]}); }
 function lsHelp(c,el){
   var act=el.dataset.ls, inp=$('lsNm'), typed=((inp&&inp.value)||'').trim();
+  if(act==='skip'){ if(LS_BUSY){ LS_BUSY.skip=true; if(window.AppReader) AppReader.cancel(); } return; }
   if(act==='box'){ BX.from='ls'; BX.kind='name'; N.side='front'; openBox(c); return; }
   if(act==='pick'){ var v=el.dataset.v; setField(c,'player',v); if(c.guess) delete c.guess.player; c.edited=true; lsAfterName(c); return; }
   if(act==='use'||act==='wd'){ if(typed.length<2){ MC().toast('Type the name first.'); return; }
@@ -1159,7 +1224,7 @@ function lsHelp(c,el){
 }
 var LS_O=null;
 function showOcr(c,o){
-  var out=$('lsOcr'); if(!out||!o) return; var h='', any=false;
+  var out=$('lsOcr'); if(!out||!o) return; var h='', any=false, bz=LS_BUSY&&LS_BUSY.c===c.id?LS_BUSY:null, pin=$('lsNm'), pv=pin?pin.value:null, pf=pin&&document.activeElement===pin, psp=pf?pin.selectionStart:null;
   function grp(lbl,key,arr,cur){ arr=arr.filter(function(x){return String(x)!==String(cur)}); if(!arr.length) return; any=true; h+='<div>'+lbl+'<div class="sg">'+arr.map(function(x){return '<button type="button" data-oc="'+key+'" data-v="'+esc(x)+'" class="chip">'+esc(x)+'</button>'}).join('')+'</div></div>'; }
   grp('Player might be:','player',o.players,c.player); grp('Year might be:','year',o.years,c.year); grp('Team might be:','team',o.teams,c.team); grp('Set might be:','brand',o.brands,c.brand);
   grp('Card number might be:','number',o.numbers,c.number); grp('Serial / print run might be:','serial',o.serials,c.serial);
@@ -1168,15 +1233,17 @@ function showOcr(c,o){
   var got=(o.got||[]).filter(function(k,ix,a){ return a.indexOf(k)===ix&&FLD_NAME[k]; }), msg='';
   if(got.length) msg='<div class="lsRes"><b>✨ I filled in '+got.map(function(k){ return FLD_NAME[k]; }).join(', ')+' from the photo.</b> They say “check this” until you confirm them. Fix or clear anything that is wrong.</div>';
   if(any) msg+='<div class="lsRes">'+(got.length?'<b>Other things I might have seen.</b> ':'<b>Suggestions only. Please check them.</b> ')+'Tap one to use it. It will be marked “check this” until you confirm it.</div>'+h;
-  if(!got.length&&!any&&c.player) msg='<div class="lsRes"><b>Thanks, the name is in.</b> I could not read the other details from the photo, so please check them below.</div>';
-  else if(!got.length&&!any) msg='<div class="lsRes lsMiss"><b>I couldn’t read this one automatically.</b> Draw a box over the name, or type it and I’ll help.</div>';
+  if(!got.length&&!any&&c.player&&!bz) msg='<div class="lsRes"><b>Thanks, the name is in.</b> I could not read the other details from the photo, so please check them below.</div>';
+  else if(!got.length&&!any&&!bz) msg='<div class="lsRes lsMiss"><b>I couldn’t read this one automatically.</b> Draw a box over the name, or type it and I’ll help.</div>';
+  if(o.note) msg+='<div class="lsRes">'+esc(o.note)+'</div>';
   var need=!c.player||!/\s/.test(String(c.player).trim());
   if(need){ var cur=c.player||''; msg+='<div class="lsHelp"><button type="button" class="hpb gold" data-ls="box">✏️ Draw a box on the photo to read it</button>'+
     '<div class="fld"><label for="lsNm">Or type the player’s name</label><input id="lsNm" type="text" autocomplete="off" autocapitalize="words" placeholder="First and last name" value="'+esc(cur)+'"></div><div id="lsNmSug" class="hpRow"></div>'+
     '<div class="hpRow"><button type="button" class="hpb" data-ls="use">Use this name</button><button type="button" class="hpb" data-ls="wd">🌐 Look up this name online</button></div>'+
     '<small>The lookup is optional and only sends the name text to wikidata.org. No photos, nothing else.</small></div>'; }
   if(!need) msg+='<div class="lsHelp"><button type="button" class="hpb" data-ls="box">✏️ Draw a box to read a name, serial or set</button></div>';
-  out.innerHTML=msg+'<small>Auto-read is a helper, not a guarantee. It is often wrong on fancy fonts and shiny cards.</small>'; if(need&&c.player){ var ip=$('lsNm'); if(ip) ip.dispatchEvent(new Event('input',{bubbles:true})); }
+  var bh=bz?'<div class="hpBusy rdB"><span class="hpSpin"></span><div class="rdT"><b>'+(bz.fb?'Using the built-in reader…':'Looking closer at this card…')+'</b><small id="rdStep">'+esc(bz.step||'')+'</small><div class="rdBar" role="progressbar" aria-label="Reading progress"><i id="rdBar" style="width:'+Math.round(100*Math.min(.98,bz.frac||0))+'%"></i></div><small class="rdKeep">'+(any||got.length?'What I have so far is below. ':'')+'You can keep going now: type the name or draw a box. <span id="rdEl"></span></small><small id="rdLong" hidden>This is taking a while on this phone. I will stop and use the built-in reader soon.</small></div><button type="button" class="hpc rdSkip" data-ls="skip">Skip</button></div>':'';
+  out.innerHTML=bh+msg+'<small>Auto-read is a helper, not a guarantee. It is often wrong on fancy fonts and shiny cards.</small>'; var ip=$('lsNm'); if(ip&&pv!=null&&pv!==ip.value&&(pf||pv.length>(ip.value||'').length)){ ip.value=pv; } if(ip&&pf){ try{ ip.focus(); ip.setSelectionRange(psp,psp); }catch(e){} } if(need&&ip&&ip.value) ip.dispatchEvent(new Event('input',{bubbles:true}));
 }
 $('lsAct').addEventListener('click',function(e){
   var c=byId(L.id); if(!c) return;
@@ -1208,7 +1275,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.3 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.4 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -1246,7 +1313,7 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.3","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.4","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};

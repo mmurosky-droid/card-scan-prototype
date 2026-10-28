@@ -491,3 +491,12 @@ body.barOn #toast{bottom:calc(env(safe-area-inset-bottom) + 150px)}
 .lsHelp .hpRow{display:flex;flex-wrap:wrap;gap:8px}
 .lsHelp input{width:100%;box-sizing:border-box;min-height:52px}
 @media (max-width:520px){.lsHelp .hpRow .hpb{flex:1 1 100%}}
+
+/* v0.10.4: progress bar + Skip while the close reader works; the tools stay usable beside it */
+.rdB{align-items:flex-start;flex-wrap:nowrap}
+.rdT{flex:1;min-width:0}
+.rdT small{display:block;overflow-wrap:anywhere}
+.rdBar{height:8px;border-radius:6px;background:rgba(212,168,75,.2);overflow:hidden;margin:6px 0 4px}
+.rdBar>i{display:block;height:100%;width:0;background:var(--gold2);border-radius:6px;transition:width .5s ease}
+.rdSkip{flex:none;min-width:64px;min-height:44px}
+.rdKeep{opacity:.9}
