@@ -11,20 +11,39 @@
 
 ## Scan the fronts
 
-1. Tap **Start camera**, then the red button.
-2. Hold your phone above the first card.
-3. **Hold still for 2 to 3 seconds.** Count "one-Mississippi, two-Mississippi."
-4. Move to the next card. Hold again.
-5. Finish a row, then tap **Next row**.
-6. See glare? Tilt the phone or card just a little.
+1. On Home, tap the big gold **Start a scan**.
+2. Tap **Start camera**. Hold your phone above the first card.
+3. Tap **Start sweep**.
+4. **Move slowly** across the row. Your phone follows two rows at a time.
+5. Keep going until you reach up to 30 cards. Then tap **Stop**.
+6. Glare? Tilt the phone or card a little.
+
+Slow is good. If you go slowly, the app waits for a clear edge or gap between cards before it counts a new one.
 
 ## Then the backs
 
-1. Tap **Backs**.
-2. Flip your cards over.
-3. Same steps: hold still 2 to 3 seconds on each card.
+1. On the results screen, tap **Scan the backs**.
+2. Flip your cards over. Keep the same order.
+3. Sweep again the same way.
 
 Backs matter. The year and set are printed there.
+
+## After you stop
+
+1. A **Saving your scan** screen shows a percent. It takes a moment. Don't worry, just wait.
+2. Then you land on **Your cards**. It shows how many cards were found and how many need a look.
+3. Count looks off? Fix it here:
+   - Red tiles say **Looks like a duplicate**. Tap one, then tap **Merge with previous** or **Remove duplicate**.
+   - Or use the **Cards in this section** box. Tap − or + and then **Update count**.
+   - Tap any photo to **Retake** or **Remove** it.
+4. Under **What next?** pick one:
+   - **Scan the backs**
+   - **Scan another section**
+   - **Save to my phone** (video and photos zip). You stay on this screen.
+   - **Done, back to home**
+5. The **Home** button at the top is always there. If a scan isn't saved, it offers **Save first**.
+
+Home lists **Your scans**. Tap one to open its cards again anytime.
 
 ## Good to know
 
@@ -33,13 +52,14 @@ Backs matter. The year and set are printed there.
 - **Graded slabs:** hold them at a slight angle so the label isn't washed out.
 - **Condition:** we can't judge corners or edges from video. We'll ask for a quick photo only if needed.
 - **Your video stays on your phone** in this version. Nothing is uploaded.
+- **Photos are kept on this page** (not the video) so you can come back to them. Tap **Save to my phone** to keep the video too.
 
 ## If the app says...
 
 | It says | Try this |
 |---|---|
 | "Too dark" | Move to soft side light. |
-| "Slow down" | Hold each card still 2 to 3 seconds. |
+| "Slow down" | Sweep a little slower. |
 | "Glare" | Tilt the card or phone, or take the card out of its case. |
 | "A little glare" | Tilt slightly, or move the light to the side. |
 
@@ -70,3 +90,6 @@ You're doing great. Every card you scan is one less to wonder about.
 ## Changelog
 
 - v0.2: coaching text only, plus the `notice`/`say()` helper. No change to analysis, recording or layout. Backup of the original: `index.html.bak-v0.1`.
+- v0.3: video row scan (sweep two rows at a time, up to 30 cards), bigger green box. Backup: `index.html.bak-v0.2`.
+- v0.4: sweep tracking picks the best frame per card.
+- v0.5: instant Saving screen, "Your cards" results with a What next? panel, real Home with Your scans and Start a scan, Home button on every screen (Save first), still photos kept in IndexedDB (never the video), Save to my phone uses the share sheet when available and stays put. Stricter card changes (net sweep distance, hysteresis, image similarity merge). Duplicate flags, Merge with previous, Remove duplicate, editable count. Backup: `index.html.bak-v0.4`.

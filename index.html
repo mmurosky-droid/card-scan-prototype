@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0a08">
-<title>Guided Scan · prototype v0.4</title>
+<title>Guided Scan · prototype v0.5</title>
 <style>
 :root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0b0a08;--panel:rgba(18,16,12,.80);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -110,13 +110,105 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #grid .t b{position:absolute;top:4px;right:4px;font-size:10px;font-weight:600;background:var(--a);color:#2a1a00;border-radius:8px;padding:2px 6px}
 #viewer{background:rgba(8,7,5,.95)}
 #viewer img{max-width:92%;max-height:56vh;border-radius:10px;border:1px solid var(--gold)}
+/* ---- v0.5 ---- */
+.screen{overflow:hidden}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;padding:calc(env(safe-area-inset-top) + 8px) 12px 6px}
+.hdr .hv{color:var(--mut);font-size:12.5px;letter-spacing:.5px}
+.homeb{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+#home{padding:0 0 calc(env(safe-area-inset-bottom) + 14px);background:radial-gradient(ellipse at 50% 0,#2a2112 0,var(--bg) 60%)}
+#homeScroll{flex:1;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 24px) 22px 10px;-webkit-overflow-scrolling:touch}
+#home .crest{color:var(--gold);letter-spacing:4px;font-size:12px;text-transform:uppercase}
+#home h1{font-size:34px;margin:8px 0 6px;color:var(--gold2)}
+#home p.sub{color:var(--mut);margin:0 0 16px;line-height:1.45}
+#home .gold-btn{width:100%;font-size:20px;min-height:64px}
+.srow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(212,168,75,.35);border-radius:16px;padding:12px 14px;min-height:64px;margin-bottom:8px}
+.srow .t1{font-family:Georgia,serif;font-size:18px;color:var(--gold2)}
+.srow .t2{font-size:13.5px;color:var(--mut);margin-top:2px;line-height:1.35}
+.srow .st{margin-left:auto;font-size:12.5px;border-radius:999px;padding:5px 10px;border:1px solid var(--a);color:var(--a);white-space:nowrap}
+.srow .st.ok{border-color:var(--g);color:var(--g)}
+.srow>div:first-child{flex:1;min-width:0}
+.empty{color:var(--mut);font-size:14.5px;line-height:1.45;padding:10px 2px}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;padding:9px 0;font-size:15px;line-height:1.4}
+.steps li:before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1a1405;font-weight:700;display:grid;place-items:center;font-size:14px}
+.linkb{background:none;color:var(--mut);text-decoration:underline;font-size:13px;padding:10px 6px;min-height:44px}
+#homeWarn{display:none;background:rgba(255,181,61,.12);border:1px solid var(--a);color:var(--a);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4;margin-bottom:10px}
+#pre .hdr{padding-left:0;padding-right:0;margin:-8px 0 0}
+/* saving */
+#sav{align-items:center;justify-content:center;text-align:center;background:var(--bg)}
+#sav .box{width:100%;max-width:340px;padding:0 24px;margin:auto}
+#sav h2{font-size:28px;color:var(--gold2);margin:18px 0 6px}
+#sav p{color:var(--mut);margin:0 0 18px;font-size:15px;line-height:1.4;min-height:22px}
+.spin{width:64px;height:64px;border-radius:50%;border:5px solid rgba(212,168,75,.25);border-top-color:var(--gold2);margin:0 auto;animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#savPct{font:700 38px Georgia,serif;color:var(--txt)}
+#savBarW{height:10px;border-radius:5px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:10px}
+#savBar{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--g))}
+/* results */
+#rev{background:var(--bg);padding:0}
+#revScroll{flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 18px);-webkit-overflow-scrolling:touch}
+#rev h1{font-size:28px;color:var(--gold2)}
+#sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin:4px 0 8px}
+#sum .big{font-family:Georgia,serif;font-size:22px;color:var(--txt)}#sum .big b{font-size:34px;color:var(--gold2)}
+.pill{font-size:13.5px;border-radius:999px;padding:5px 11px;border:1px solid var(--a);color:var(--a)}
+.pill.red{border-color:var(--r);color:var(--r)}
+#revNote{display:none;background:rgba(61,220,132,.1);border:1px solid var(--g);color:#bff5d6;border-radius:12px;padding:9px 12px;font-size:14px;line-height:1.4;margin:6px 0}
+#cntEd{background:rgba(255,255,255,.05);border:1px solid rgba(212,168,75,.3);border-radius:14px;padding:10px 12px;margin:8px 0}
+#cntEd .r1{display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:14.5px}
+.stp{display:flex;align-items:center;gap:6px}
+.stp button{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(212,168,75,.5);font-size:24px;color:var(--gold2)}
+.stp input{width:64px;height:48px;border-radius:12px;border:1px solid rgba(212,168,75,.5);background:#14110b;color:var(--txt);font-size:22px;text-align:center;font-family:Georgia,serif}
+#rev #cedH{margin:8px 0 0;font-size:13px;color:var(--mut);line-height:1.4}
+#cntEd #cedGo{width:100%;margin-top:8px;min-height:48px;display:none}
+#dupNote{display:none;color:var(--a);font-size:13.5px;margin:4px 2px 6px;line-height:1.4}
+#rev #grid{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:31vh;min-height:90px;overflow-y:auto;padding:2px 0 8px;border-radius:10px}
+#rev #grid .t{aspect-ratio:.7}
+#grid .t.dp{border-color:var(--r);border-width:2px}
+#grid .t i{position:absolute;left:0;right:0;top:0;font-style:normal;font-size:9px;line-height:1.15;padding:3px 3px;background:rgba(255,82,82,.9);color:#fff;text-align:center}
+#next{margin-top:10px;background:rgba(212,168,75,.08);border:1px solid rgba(212,168,75,.4);border-radius:18px;padding:14px 12px}
+#next h2{font-size:24px;color:var(--gold2);margin-bottom:10px}
+#next button{width:100%;min-height:58px;margin-bottom:9px;font-size:17px;padding:12px 16px}
+#next button small{display:block;font-size:12px;font-weight:400;opacity:.8;margin-top:1px}
+#next .gold-btn.dim{background:rgba(255,255,255,.08);color:var(--gold2);box-shadow:none;border:1px solid rgba(212,168,75,.5);font-weight:600}
+#rev #saveInfo{color:var(--mut);font-size:12.5px;line-height:1.4;margin:0 2px 4px}
+#more{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;justify-content:center}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 26px);transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;z-index:60;pointer-events:none;background:#17361f;border:1px solid var(--g);color:#d7ffe6;border-radius:999px;padding:13px 22px;font-size:16px;font-weight:600;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.warn{background:#3a2a0c;border-color:var(--a);color:#ffe2ae}
+#dlg{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(8,7,5,.94);text-align:center;padding:28px}
+#dlg.on{display:flex}
+#dlg h2{font-size:27px;color:var(--gold2)}#dlg p{margin:0;font-size:17px;line-height:1.45;max-width:330px}
+#dlg .mbtns a{display:block;text-align:center;text-decoration:none;line-height:28px}
+#viewer p.vh{font-size:14px;color:var(--mut);margin:0;max-width:320px;line-height:1.4}
+#viewer img{max-height:44vh}
 </style>
 </head>
 <body>
 
-<section id="pre" class="screen on">
-  <div class="crest">Moose Cards · prototype v0.4</div>
-  <h1>Guided Scan</h1>
+<section id="home" class="screen on">
+  <div id="homeScroll">
+    <div class="crest">Moose Cards · v0.5</div>
+    <h1>Guided Scan</h1>
+    <p class="sub">Scan your cards fast. Everything stays on your phone.</p>
+    <div id="homeWarn"></div>
+    <button class="gold-btn" id="startScan">Start a scan</button>
+    <div class="lab">Your scans</div>
+    <div id="sessList"></div>
+    <div class="lab">How it works</div>
+    <ol class="steps">
+      <li><span>Lay two rows of cards face up in soft light. Tap <b>Start a scan</b>.</span></li>
+      <li><span>Glide your phone slowly along each row. Up to 30 cards per scan. I pick out each card for you.</span></li>
+      <li><span>Check your cards, scan the backs, then save everything to your phone.</span></li>
+    </ol>
+    <div style="text-align:center;margin-top:10px"><button class="linkb" id="clearAll">Clear all scans from this phone</button></div>
+    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:2px">Guided Scan v0.5 · Moose Cards</div>
+  </div>
+</section>
+
+<section id="pre" class="screen">
+  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.5</span></div>
+  <div class="crest">Moose Cards · prototype v0.5</div>
+  <h1>Get ready</h1>
   <p class="sub">Glide your phone slowly along a row of cards. I record the video and pick the best photo of each card for you. Everything stays on your phone.</p>
 
   <div class="lab">What are you scanning?</div>
@@ -138,8 +230,8 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div class="spacer"></div>
   <button class="gold-btn" id="go">Start camera</button>
   <div id="err" role="alert"></div>
-  <div class="priv">Nothing is uploaded. Video and photos live in this page until you download them.</div>
-  <footer>Guided Scan v0.4 · Moose Cards</footer>
+  <div class="priv">Nothing is uploaded. Photos are kept on this phone until you delete them.</div>
+  <footer>Guided Scan v0.5 · Moose Cards</footer>
 </section>
 
 <section id="cam" class="screen">
@@ -147,6 +239,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div id="frame" class="idle"><div class="edge"></div><span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span><div class="prog"><i></i></div></div>
   <div id="hud">
     <div class="row">
+      <button class="chip homeb" id="camHome">⌂ Home</button>
       <span id="rec"></span>
       <img id="ref" alt="">
       <div id="step">Fronts sweep<small>Center the first card</small></div>
@@ -169,26 +262,59 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div class="modal" id="mod"><h2 id="modT"></h2><p id="modP"></p><div class="mbtns" id="modB"></div></div>
 </section>
 
-<section id="rev" class="screen">
-  <h1>Your scan</h1>
-  <p id="revP"></p>
-  <div id="grid"></div>
-  <div class="btns">
-    <button class="gold-btn" id="dlZip">Download photos (.zip)</button>
-    <div id="vids"></div>
-    <button class="ghost-btn" id="addMan">Missed one? Add a manual capture</button>
-    <button class="ghost-btn" id="backScan">Back to scanning</button>
-    <button class="ghost-btn" id="startOver">Start over</button>
+<section id="sav" class="screen">
+  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.5</span></div>
+  <div class="box">
+    <div class="spin" aria-hidden="true"></div>
+    <h2>Saving your scan…</h2>
+    <div id="savPct" aria-live="polite">0%</div>
+    <div id="savBarW"><div id="savBar"></div></div>
+    <p id="savMsg" style="margin-top:14px">Getting started…</p>
   </div>
-  <div class="modal" id="viewer"><h2 id="vT"></h2><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
 </section>
+
+<section id="rev" class="screen">
+  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.5</span></div>
+  <div id="revScroll">
+    <h1>Your cards</h1>
+    <div id="sum"></div>
+    <div id="revNote"></div>
+    <div id="cntEd">
+      <div class="r1"><span>Cards in this section</span>
+        <div class="stp"><button id="cm" aria-label="One less">−</button><input id="cin" type="number" inputmode="numeric" min="0" max="60"><button id="cp" aria-label="One more">+</button></div></div>
+      <p id="cedH"></p>
+      <button class="ghost-btn" id="cedGo">Update count</button>
+    </div>
+    <div id="dupNote"></div>
+    <div id="grid"></div>
+    <div id="next">
+      <h2>What next?</h2>
+      <button class="gold-btn" id="nxBacks">Scan the backs<small>Same order as the fronts</small></button>
+      <button class="ghost-btn" id="nxSec">Scan another section<small>Start a fresh scan, up to 30 more cards</small></button>
+      <button class="gold-btn dim" id="nxSave">Save to my phone<small>Video + photos zip</small></button>
+      <p id="saveInfo"></p>
+      <button class="ghost-btn" id="nxHome">Done, back to home</button>
+    </div>
+    <div id="more">
+      <button class="linkb" id="addMan">Missed one? Add a card by hand</button>
+      <button class="linkb" id="keepScan">Keep scanning this section</button>
+      <button class="linkb" id="delScan">Delete this scan</button>
+    </div>
+  </div>
+  <div class="modal" id="viewer"><h2 id="vT"></h2><p class="vh" id="vH"></p><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
+</section>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="dlg"><h2 id="dlgT"></h2><p id="dlgP"></p><div class="mbtns" id="dlgB"></div></div>
 <script>
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
 var CAP=30, P=0.93;               // card cap per scan; card pitch in guide widths
+var HYST=0.12;                    // extra slide (in pitches) needed before a new card starts
+var DUP_AUTO=9, DUP_FLAG=18;      // similarity: merge on the spot / flag as "looks like a duplicate"
 var S={mode:'graded',flow:'passes',phase:'fronts',state:'ready',fronts:[],backs:[],videos:[],sec:{fronts:0,backs:0},
-  stream:null,dbg:false,m:null,wake:null,looping:false,manual:null,pend:0,toast:null,seg:null,T:null,t0:0,mime:null,rec:null,recChunks:[],recWait:null,hold:0,lvl:'idle',okRun:0};
+  cur:null,sessions:[],nextNum:1,db:null,revNote:'',saveBusy:false,busy:false,
+  stream:null,dbg:false,m:null,wake:null,looping:false,manual:null,pend:0,toast:null,seg:null,prevSeg:null,T:null,t0:0,mime:null,rec:null,recChunks:[],recWait:null,hold:0,lvl:'idle',okRun:0};
 var RATIO={graded:0.52,raw:0.70};        // looser than a real slab (.54) / card (.71)
 var WFRAC={graded:0.80,raw:0.88};
 var AW=128, ac=document.createElement('canvas'), actx=ac.getContext('2d',{willReadFrequently:true});
@@ -197,6 +323,7 @@ var vid=$('v'), frame=$('frame'), coach=$('coach');
 var rect={x:0,y:0,w:100,h:100};
 var CAN_REC=!!(window.MediaRecorder);
 if(!CAN_REC) $('recNote').style.display='flex';
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 
 function seg(id,key){
   $(id).addEventListener('click',function(e){
@@ -226,31 +353,65 @@ async function openCam(){
     throw e;
   }
 }
-$('go').addEventListener('click',async function(){
-  $('err').textContent=''; ding(true);
-  try{ S.stream=await openCam(); }catch(e){ $('err').textContent=friendlyErr(e); return; }
+async function ensureCam(){
+  var live=S.stream&&S.stream.getVideoTracks().some(function(t){return t.readyState==='live'});
+  if(live) return true;
+  S.stream=await openCam();
   vid.srcObject=S.stream;
   try{ await vid.play(); }catch(e){}
   try{ var t=S.stream.getVideoTracks()[0]; var c=t.getCapabilities&&t.getCapabilities();
     if(c&&c.focusMode&&c.focusMode.indexOf('continuous')>=0) await t.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
   try{ if(navigator.wakeLock) S.wake=await navigator.wakeLock.request('screen'); }catch(e){}
-  show('cam'); newSession(); layout(); setTimeout(layout,300); startLoop();
-});
-function show(id){['pre','cam','rev'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
+  return true;
+}
+function stopCam(){
+  try{ if(S.stream) S.stream.getTracks().forEach(function(t){t.stop()}); }catch(e){}
+  S.stream=null; try{vid.srcObject=null}catch(e){}
+  try{ if(S.wake&&S.wake.release) S.wake.release(); }catch(e){} S.wake=null;
+}
+function show(id){['home','pre','cam','sav','rev'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
+function goCam(msg,ms){ show('cam'); updateUI(); layout(); setTimeout(layout,300); startLoop(); if(msg) say(msg,ms||3000); }
 
-/* ---------- session ---------- */
+/* ---------- toast + dialog ---------- */
+var toastT=null;
+function toast(msg,ms,warn){var t=$('toast');t.textContent=msg;t.className='on'+(warn?' warn':'');clearTimeout(toastT);toastT=setTimeout(function(){t.className=''},ms||2600)}
+function askDlg(title,text,btns){
+  $('dlgT').textContent=title;$('dlgP').textContent=text;var h=$('dlgB');h.innerHTML='';
+  btns.forEach(function(x){
+    var e=document.createElement(x.href?'a':'button');e.className=x.cls==='gold'?'gold-btn':'ghost-btn';e.textContent=x.label;
+    if(x.href){e.href=x.href;e.download=x.download||'';}
+    e.addEventListener('click',function(ev){ if(x.fn&&x.fn(ev)===false) return; if(!x.keep) closeDlg(); });
+    h.appendChild(e);
+  });
+  $('dlg').classList.add('on');
+}
+function closeDlg(){$('dlg').classList.remove('on')}
+
+/* ---------- sessions ---------- */
 function list(side){return (side||S.phase)==='fronts'?S.fronts:S.backs}
 function cap(){return S.phase==='fronts'?CAP:Math.min(CAP,S.fronts.length||CAP)}
 function count(a){return a.filter(Boolean).length}
-function newT(){return {key:null,keyH:0,kx:0,ky:0,px:0,py:0,ppx:0,ppy:0,lx:0,ly:0,L:0,vel:0,bad:0,ok:true,lost:false}}
-function newSession(){
-  S.fronts=[];S.backs=[];S.videos=[];S.sec={fronts:0,backs:0};S.phase='fronts';S.state='ready';S.manual=null;S.T=newT();S.seg=null;S.hold=0;
-  updateUI(); say('Fit one card inside the frame, then tap Start sweep.',4000);
+function newT(){return {key:null,keyH:0,kx:0,ky:0,px:0,py:0,ppx:0,ppy:0,dir:null,L:0,vel:0,bad:0,ok:true,lost:false}}
+function isEmpty(s){return !s.fronts.length&&!s.backs.length}
+function createSession(){
+  S.sessions=S.sessions.filter(function(x){return x===S.cur||!isEmpty(x)});
+  if(S.cur&&isEmpty(S.cur)) S.sessions=S.sessions.filter(function(x){return x!==S.cur});
+  var s={id:'s'+Date.now().toString(36)+Math.floor(Math.random()*1e4),num:S.nextNum++,ts:Date.now(),mode:S.mode,flow:S.flow,phase:'fronts',
+    fronts:[],backs:[],videos:[],sec:{fronts:0,backs:0},saved:false,target:null,videoLost:false,ver:0,zip:null,zipP:null};
+  S.sessions.push(s); loadSession(s);
+  updateUI(); return s;
 }
+function loadSession(s){
+  S.cur=s; S.fronts=s.fronts; S.backs=s.backs; S.videos=s.videos; S.sec=s.sec; S.phase=s.phase; S.mode=s.mode; S.flow=s.flow;
+  S.state='ready'; S.manual=null; S.T=newT(); S.seg=null; S.prevSeg=null; S.hold=0; S.m=null;
+}
+function touch(s){ s=s||S.cur; if(!s) return; s.saved=false; s.ver++; s.zip=null; s.zipP=null; schedPersist(s); }
 function say(msg,ms){S.toast={msg:msg,until:performance.now()+(ms||1200)}}
 
 function fmtT(s){s=Math.floor(s);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2)}
 function updateUI(){
+  if(!S.cur) return;
+  S.cur.phase=S.phase; S.cur.mode=S.mode; S.cur.flow=S.flow;
   var l=list(), scanning=S.state==='scanning', man=S.state==='manual';
   var found=count(l)+((scanning&&S.seg&&S.seg.best)?1:0), c=man?CAP:cap();
   var title, sub;
@@ -264,7 +425,7 @@ function updateUI(){
   var np=$('nextpass');
   np.style.display=(S.flow==='passes'&&S.phase==='fronts'&&S.state==='ready'&&count(S.fronts)>0)?'block':'none';
   var ref=$('ref');
-  if(S.phase==='backs'&&!man&&S.fronts[l.length]){ref.src=S.fronts[l.length].url;ref.style.display='block';}
+  if(S.phase==='backs'&&!man&&S.fronts[l.length]&&S.fronts[l.length].url){ref.src=S.fronts[l.length].url;ref.style.display='block';}
   else ref.style.display='none';
   var p=$('prim');
   if(scanning){p.textContent='■ Stop';p.className='gold-btn stop';}
@@ -276,7 +437,6 @@ function updateUI(){
   $('review').textContent='Review ('+(count(S.fronts)+count(S.backs))+')';
   layout();
 }
-
 /* ---------- layout ---------- */
 function layout(){
   var vw=window.innerWidth, vh=window.innerHeight, ratio=RATIO[S.mode];
@@ -291,6 +451,39 @@ function layout(){
 }
 window.addEventListener('resize',layout);window.addEventListener('orientationchange',function(){setTimeout(layout,250)});
 
+/* ---------- picture similarity (is this the same card again?) ---------- */
+function grayOfCanvas(c){
+  var AH=Math.max(8,Math.round(AW*c.height/c.width));
+  ac.width=AW; ac.height=AH; actx.drawImage(c,0,0,AW,AH);
+  var d=actx.getImageData(0,0,AW,AH).data, g=new Uint8Array(AW*AH), i;
+  for(i=0;i<g.length;i++) g[i]=(d[i*4]*77+d[i*4+1]*150+d[i*4+2]*29)>>8;
+  return {gray:g,AH:AH};
+}
+// Lower = more alike. Finds the best sideways shift of a centre patch, then compares the whole overlap at that shift.
+function simSAD(a,b,AHa,AHb){
+  if(!a||!b||Math.abs(AHa-AHb)>3) return 99;
+  var W=AW,AH=Math.min(AHa,AHb),x0=47,x1=81,y0=Math.round(AH*.3),y1=Math.round(AH*.7),best=1e9,bdx=0,bdy=0,dx,dy,x,y,s,n,ra,rb;
+  var m=0,m2=0,c=0,v;
+  for(y=y0;y<y1;y+=3)for(x=x0;x<x1;x+=3){v=a[y*W+x];m+=v;m2+=v*v;c++}
+  if(m2/c-(m/c)*(m/c)<60) return 99;               // too plain to judge
+  for(dy=-12;dy<=12;dy+=2)for(dx=-46;dx<=46;dx+=2){
+    s=0;n=0;
+    for(y=y0;y<y1;y+=3){ra=y*W;rb=(y+dy)*W+dx;for(x=x0;x<x1;x+=3){s+=Math.abs(a[ra+x]-b[rb+x]);n++}}
+    s/=n; if(s<best){best=s;bdx=dx;bdy=dy}
+  }
+  var xs=Math.max(6,-bdx+6), xe=Math.min(W-6,W-bdx-6), ys=Math.max(Math.round(AH*.12),-bdy+2), ye=Math.min(Math.round(AH*.88),AH-bdy-2);
+  s=0;n=0;
+  for(y=ys;y<ye;y+=2){ra=y*W;rb=(y+bdy)*W+bdx;for(x=xs;x<xe;x+=2){s+=Math.abs(a[ra+x]-b[rb+x]);n++}}
+  if(n<200) return 99;
+  return Math.max(best,s/n);
+}
+function computeDups(l){
+  l.forEach(function(x,i){
+    if(!x) return; x.dup=false; x.simPrev=null;
+    var p=i>0?l[i-1]:null;
+    if(p&&p.gray&&x.gray){ x.simPrev=simSAD(p.gray,x.gray,p.AH,x.AH); x.dup=x.simPrev<DUP_FLAG; }
+  });
+}
 /* ---------- analysis ---------- */
 function vidRegion(){
   var W=vid.videoWidth,H=vid.videoHeight; if(!W||!H) return null;
@@ -318,7 +511,6 @@ function analyze(r){
   var mean=lapSum/cnt, lapVar=lapSq/cnt-mean*mean;
   return {sharp:lapVar, glare:blown/n, shadow:dark/n, bright:sum/n, edge:edges/cnt, gray:g, AH:AH};
 }
-
 /* ---------- motion tracking (how far the cards have slid through the frame) ---------- */
 var TR=21, TP=3, sads=new Float32Array((2*TR+1)*(2*TR+1));
 function track(g,AH,dt){
@@ -351,10 +543,11 @@ function track(g,AH,dt){
     if(T.bad>=6){T.key=g.slice();T.kx=T.px;T.ky=T.py;T.bad=0}
   }
   T.ppx=T.px;T.ppy=T.py;
-  var dist=Math.hypot((T.px-T.lx)/W,(T.py-T.ly)/AH);
-  if(dist>=0.025){T.L+=dist;T.lx=T.px;T.ly=T.py}
+  // progress = net distance along the sweep direction (v0.5): hand wobble and going back never add up
+  var dx=T.px/W, dy=T.py/W;
+  if(!T.dir){ var mg=Math.hypot(dx,dy); if(mg>=0.12) T.dir=[dx/mg,dy/mg]; T.L=Math.max(T.L,mg); }
+  else T.L=Math.max(T.L,dx*T.dir[0]+dy*T.dir[1]);
 }
-
 /* relaxed thresholds (v0.4): only red blocks a capture */
 function judge(m){
   var red=[],yel=[];
@@ -380,7 +573,6 @@ function quality(m){
       ql=(m.bright>=70&&m.bright<=215)?1:clamp(1-Math.min(Math.abs(m.bright-70),Math.abs(m.bright-215))/60), qv=1-clamp(m.speed/2);
   return 100*(0.35*qs+0.2*qg+0.12*qh+0.1*ql+0.23*qv);
 }
-
 /* ---------- main loop ---------- */
 var lastT=0;
 function startLoop(){ if(S.looping) return; S.looping=true; step(); }
@@ -393,7 +585,7 @@ function step(){
       var r=vidRegion();
       if(r){
         var a=analyze(r); track(a.gray,a.AH,dt);
-        var raw={sharp:a.sharp,glare:a.glare,shadow:a.shadow,bright:a.bright,edge:a.edge,speed:S.T.vel,gray:a.gray};
+        var raw={sharp:a.sharp,glare:a.glare,shadow:a.shadow,bright:a.bright,edge:a.edge,speed:S.T.vel,gray:a.gray,AH:a.AH};
         // smooth the slow-changing numbers a little for the colour; use raw numbers to pick frames
         var m={sharp:raw.sharp,glare:raw.glare,shadow:raw.shadow,bright:raw.bright,edge:raw.edge,speed:raw.speed};
         if(S.m){var o=S.m,q=.6;['sharp','glare','shadow','bright','edge','speed'].forEach(function(k){m[k]=o[k]*(1-q)+raw[k]*q})}
@@ -425,24 +617,23 @@ function dbgShow(m,Q,jr){
 }
 
 /* ---------- row sweep: best frame per card ---------- */
-function newSeg(k){return {k:k,best:null,score:0,level:'red',canvas:null,gray:null}}
+function newSeg(k){return {k:k,best:null,score:0,level:'red',canvas:null,gray:null,AH:0}}
 function scanTick(now,r,raw,jr,Q){
   var T=S.T, sg=S.seg;
   if(now-S.t0>MAX_SEC*1000){ stopScan('time'); return; }
   // weak tracking: fall back to "did the picture change a lot after the best frame?"
   if(!T.ok&&!T.lost&&sg.gray&&T.bad>=3){
     var df=0,i,g=raw.gray,b=sg.gray;for(i=0;i<g.length;i+=3)df+=Math.abs(g[i]-b[i]);df/=g.length/3;
-    if(df>30) T.L=Math.max(T.L,(sg.k+0.5)*P+0.001);
+    if(df>38) T.L=Math.max(T.L,(sg.k+0.5)*P+HYST*P+0.001);
   }
-  // card boundary crossed -> close this card's segment
-  var kNow=Math.floor(T.L/P+0.5), guard=0;
+  // card boundary crossed -> close this card's segment (needs a clear extra slide, v0.5)
+  var kNow=Math.max(0,Math.floor((T.L-HYST*P)/P+0.5)), guard=0;
   while(sg.k<kNow&&S.state==='scanning'&&guard++<4){
-    commitSeg(sg); 
+    commitSeg(sg);
     if(finishedCheck()) return;
     sg=S.seg=newSeg(sg.k+1);
-    if(kNow>sg.k&&!sg.best){}  // fast jump: the loop will close skipped ones as missed
   }
-  var frac=T.L/P-sg.k;                    // -.5 .. .5 around the card centre
+  var frac=(T.L-HYST*P)/P-sg.k;          // -.5 .. .5 around the card centre
   if(jr.level!=='red'){
     var center=1-clamp(Math.abs(frac)*2)*0.6;
     var sc=Q*center*(jr.level==='yellow'?0.85:1);
@@ -450,20 +641,37 @@ function scanTick(now,r,raw,jr,Q){
       var sgc=sg.canvas||(sg.canvas=document.createElement('canvas')), s=Math.min(1,1100/r.sw);
       sgc.width=Math.round(r.sw*s);sgc.height=Math.round(r.sh*s);
       sgc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,sgc.width,sgc.height);
-      sg.best=true;sg.score=sc;sg.level=jr.level;sg.gray=raw.gray.slice();
+      sg.best=true;sg.score=sc;sg.level=jr.level;sg.gray=raw.gray.slice();sg.AH=raw.AH;
       var l=list(); $('found').innerHTML='Cards found: <b>'+(count(l)+1)+'</b> of '+cap();
     }
   }
   // 30th (or last expected) card: stop once we are past its middle
-  if(list().length>=cap()-1&&sg.best&&frac>0.2){ commitSeg(sg); S.seg=newSeg(sg.k+1); finishedCheck(true); }
+  if(list().length>=cap()-1&&sg.best&&frac>0.2&&!sameAsPrev(sg)){ commitSeg(sg); S.seg=newSeg(sg.k+1); finishedCheck(true); }
+}
+function sameAsPrev(sg){
+  var p=S.prevSeg; if(!p||!sg.best||!sg.gray) return false;
+  return simSAD(p.gray,sg.gray,p.AH,sg.AH)<DUP_AUTO;
 }
 function commitSeg(sg){
   var l=list();
+  if(!sg.best){ if(l.length>=cap()) return; S.prevSeg=null; l.push(null); say('Missed one. Try a bit slower',1500); updateUI(); return; }
+  // same card seen again because you moved slowly? merge into the last one, keep the better photo
+  if(sameAsPrev(sg)){
+    var p=S.prevSeg;
+    if(sg.score>p.score){
+      p.score=sg.score; p.gray=sg.gray; p.AH=sg.AH; var it=p.item;
+      it.gray=sg.gray; it.AH=sg.AH; it.score=Math.round(sg.score); it.conf=(sg.level==='yellow'||sg.score<35)?'review':'ok';
+      S.pend++; var cv=sg.canvas; it.w=cv.width; it.h=cv.height;
+      cv.toBlob(function(b){ S.pend--; if(b){ var old=it.url; it.blob=b; it.url=URL.createObjectURL(b); if(old) setTimeout(function(){URL.revokeObjectURL(old)},3000);} },'image/jpeg',0.86);
+      sg.canvas=null; // the canvas now belongs to the encoder; make a fresh one for the next card
+    }
+    say('Same card. Merged',900); return;
+  }
   if(l.length>=cap()) return;
-  if(!sg.best){ l.push(null); say('Missed one. Try a bit slower',1500); updateUI(); return; }
-  var item={blob:null,url:null,w:sg.canvas.width,h:sg.canvas.height,conf:(sg.level==='yellow'||sg.score<35)?'review':'ok',score:Math.round(sg.score),sec:S.sec[S.phase]};
+  var item={blob:null,url:null,w:sg.canvas.width,h:sg.canvas.height,conf:(sg.level==='yellow'||sg.score<35)?'review':'ok',score:Math.round(sg.score),sec:S.sec[S.phase],gray:sg.gray,AH:sg.AH};
   l.push(item); S.pend++;
-  sg.canvas.toBlob(function(b){ S.pend--; if(b){item.blob=b;item.url=URL.createObjectURL(b);} refreshThumb(); },'image/jpeg',0.86);
+  S.prevSeg={item:item,gray:sg.gray,AH:sg.AH,score:sg.score};
+  sg.canvas.toBlob(function(b){ S.pend--; if(b){item.blob=b;item.url=URL.createObjectURL(b);} },'image/jpeg',0.86);
   S.found=l.length; say('Card '+l.length+' ✓',900); feedback(); pulse(); updateUI();
 }
 function pulse(){var f=$('found');f.classList.add('pulse');setTimeout(function(){f.classList.remove('pulse')},350)}
@@ -471,8 +679,6 @@ function finishedCheck(force){
   if(list().length>=cap()){ stopScan(S.phase==='backs'?'backsdone':'limit'); return true; }
   return false;
 }
-function refreshThumb(){ /* thumbnails are built when the review opens */ }
-
 /* ---------- recording ---------- */
 function pickMime(){
   if(!CAN_REC) return null;
@@ -487,13 +693,13 @@ function startRec(){
     var mime=pickMime(), opt={videoBitsPerSecond:3500000}; if(mime) opt.mimeType=mime;
     var chunks=[], rec=new MediaRecorder(S.stream,opt);
     rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data) };
-    var phase=S.phase, sec=S.sec[S.phase];
+    var phase=S.phase, sec=S.sec[S.phase], sess=S.cur;
     S.recWait=new Promise(function(res){
       rec.onstop=function(){
         var type=rec.mimeType||mime||'video/webm', ext=/mp4/.test(type)?'mp4':'webm';
         if(chunks.length){
           var b=new Blob(chunks,{type:type.split(';')[0]});
-          S.videos.push({blob:b,url:URL.createObjectURL(b),name:phase+'-sweep-'+sec+'.'+ext,phase:phase,sec:sec,size:b.size});
+          sess.videos.push({blob:b,url:URL.createObjectURL(b),name:'section-'+sess.num+'-'+phase+'-sweep-'+sec+'.'+ext,phase:phase,sec:sec,size:b.size});
         }
         res();
       };
@@ -512,38 +718,41 @@ function stopRec(){
 /* ---------- start / stop ---------- */
 function startScan(){
   if(S.state!=='ready'||!vid.videoWidth) return;
-  if(list().length>=cap()){ showModal('That is the limit','You have '+list().length+' cards in this scan. Review and download, then start a new scan.',[['Review & download','gold',openReview]]); return; }
-  S.sec[S.phase]++; S.state='scanning'; S.t0=performance.now(); S.T=newT(); S.seg=newSeg(0); S.m=null; S.toast=null;
+  if(list().length>=cap()){ showModal('That is the limit','You have '+list().length+' cards in this scan. See your cards, then start another section.',[['See your cards','gold',function(){openReview()}]]); return; }
+  S.sec[S.phase]++; S.state='scanning'; S.t0=performance.now(); S.T=newT(); S.seg=newSeg(0); S.prevSeg=null; S.m=null; S.toast=null;
   startRec(); ding(true); updateUI(); say('Go! Glide slowly along the row',1800);
 }
+/* saving screen with a real progress bar */
+var PG={v:0,goal:0,cap:0,t:null};
+function pgStart(){ PG.v=0;PG.goal=0.03;PG.cap=0.2; clearInterval(PG.t); PG.t=setInterval(pgTick,50); $('savMsg').textContent='Finishing your video…'; pgDraw(); }
+function pgSet(goal,cap,msg){ PG.goal=goal; PG.cap=Math.max(goal,cap||goal); if(msg) $('savMsg').textContent=msg; }
+function pgTick(){ if(PG.v<PG.goal) PG.v+=(PG.goal-PG.v)*.3+.002; else if(PG.v<PG.cap) PG.v+=.0015; if(PG.v>1) PG.v=1; pgDraw(); }
+function pgDraw(){ var p=Math.round(PG.v*100); $('savPct').textContent=p+'%'; $('savBar').style.width=p+'%'; }
+function pgEnd(){ clearInterval(PG.t); PG.v=1; pgDraw(); }
 async function stopScan(reason){
   if(S.state!=='scanning') return;
   S.state='stopping';
-  var sg=S.seg;
+  var s=S.cur, sg=S.seg;
   if(sg&&sg.best) commitSeg(sg);
   S.seg=null;
-  await stopRec();
-  await new Promise(function(res){(function w(){S.pend>0?setTimeout(w,40):res()})()});
-  S.state='ready'; S.T=newT(); updateUI(); feedback();
-  stopModal(reason);
-}
-function stopModal(reason){
-  var l=list(), n=count(l), miss=l.length-n, c=cap(), v=S.videos.length&&S.videos[S.videos.length-1].phase===S.phase?S.videos[S.videos.length-1]:null;
-  var vt=v?(' Video saved ('+(v.size/1048576).toFixed(1)+' MB).'):(CAN_REC?' (No video was saved this time.)':" Video saving isn't supported on this browser.");
-  var t='Sweep done', p=n+' of '+c+' cards found'+(miss?' · '+miss+' missed':'')+'.'+vt, b=[];
-  if(reason==='limit') p+=' That is the 30-card limit for one scan.';
-  if(reason==='time') p+=' I stopped at 3 minutes to keep the video small.';
-  var full=l.length>=c;
-  if(S.phase==='backs'){
-    if(full){t='All backs captured';p=n+' backs matched to '+S.fronts.length+' fronts.'+vt;b.push(['Review & download','gold',openReview]);}
-    else{b.push(['Scan another section','gold',closeModal]);b.push(['Review & download','ghost',openReview]);}
-  }else{
-    if(S.flow==='passes'&&n>0) b.push(['Done with fronts → scan backs','gold',toBacks]);
-    else b.push(['Review & download','gold',openReview]);
-    if(!full) b.push(['Scan another section','ghost',closeModal]);
-    if(S.flow==='passes'&&n>0) b.push(['Review & download','ghost',openReview]);
-  }
-  showModal(t,p,b);
+  show('sav'); pgStart();                          // instant feedback: no tap ever seems to hang
+  try{
+    await stopRec();
+    pgSet(.35,.45,'Cutting out your cards…');
+    var guard=0; while(S.pend>0&&guard++<200) await sleep(40);
+    if(s===S.cur){ S.state='ready'; S.T=newT(); }
+    pgSet(.5,.55,'Saving on this phone…');
+    await persist(s);
+    pgSet(.6,.7,'Packing your photos…');
+    await prepZip(s,function(f){ pgSet(.6+.38*f,.6+.38*f); });
+  }catch(e){ if(window.console) console.warn(e); }
+  S.state='ready'; S.T=newT();
+  pgSet(1,1,'All set'); pgEnd(); await sleep(350);
+  var n=count(s.fronts);
+  S.revNote = reason==='limit'?"That's the 30-card limit for one scan. Use “Scan another section” for more.":
+              reason==='time'?'I stopped at 3 minutes to keep the video small.':
+              reason==='backsdone'?'All backs captured.':'';
+  openReview(s);
 }
 function showModal(t,p,btns){
   $('modT').textContent=t;$('modP').textContent=p;var h=$('modB');h.innerHTML='';
@@ -552,15 +761,17 @@ function showModal(t,p,btns){
 }
 function closeModal(){$('mod').classList.remove('on');updateUI();}
 function toBacks(){
-  S.phase='backs'; S.T=newT();
-  showModal('Now flip the cards','Flip each card over, keep the same order, and start again at the first card. I stop after '+S.fronts.length+' backs.',[['Ready','gold',closeModal]]);
+  S.phase='backs'; S.T=newT(); S.prevSeg=null;
+  var have=S.backs.length;
+  showModal('Now flip the cards',have?('Keep the same order and pick up at card '+(have+1)+'. I stop after '+S.fronts.length+' backs.'):('Flip each card over, keep the same order, and start again at the first card. I stop after '+S.fronts.length+' backs.'),[['Ready','gold',closeModal]]);
   updateUI();
 }
 
 /* ---------- manual capture (retake / missed one) ---------- */
-function startManual(side,idx){
+async function startManual(side,idx){
+  try{ await ensureCam(); }catch(e){ toast(friendlyErr(e),4000,true); return; }
   S.manual={side:side,idx:idx}; S.state='manual'; S.hold=0; S.T=newT();
-  $('viewer').classList.remove('on'); show('cam'); updateUI(); layout(); startLoop();
+  $('viewer').classList.remove('on'); updateUI(); goCam();
 }
 function manualTick(now,j){
   var p=frame.querySelector('.prog i'), ok=j.level==='green'&&S.T.vel<0.3;
@@ -571,19 +782,20 @@ function grab(cb){
   var r=vidRegion(); if(!r) return;
   var oc=document.createElement('canvas'), s=Math.min(1,1100/r.sw); oc.width=Math.round(r.sw*s); oc.height=Math.round(r.sh*s);
   oc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,oc.width,oc.height);
-  oc.toBlob(function(b){ if(b) cb({blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height,conf:'ok',score:0,sec:0,manual:true}); },'image/jpeg',0.9);
+  var g=grayOfCanvas(oc);
+  oc.toBlob(function(b){ if(b) cb({blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height,conf:'ok',score:0,sec:0,manual:true,gray:g.gray,AH:g.AH}); },'image/jpeg',0.9);
 }
 function manualGrab(){
   if(S.state!=='manual'||!S.manual) return; var mm=S.manual; S.state='ready'; S.hold=0;
   grab(function(item){
     var l=list(mm.side), old=l[mm.idx]; if(old&&old.url) setTimeout(function(){URL.revokeObjectURL(old.url)},3000);
-    l[mm.idx]=item; S.manual=null; feedback(); updateUI(); openReview();
+    l[mm.idx]=item; S.manual=null; touch(); feedback(); updateUI(); openReview();
   });
 }
 frame.querySelector('.prog').style.opacity=0;
-var progObs=setInterval(function(){frame.querySelector('.prog').style.opacity=(S.state==='manual')?1:0},200);
+setInterval(function(){frame.querySelector('.prog').style.opacity=(S.state==='manual')?1:0},200);
 
-/* ---------- buttons ---------- */
+/* ---------- camera buttons ---------- */
 $('prim').addEventListener('click',function(){
   if(S.state==='scanning') stopScan('manual');
   else if(S.state==='manual') manualGrab();
@@ -595,13 +807,12 @@ $('undo').addEventListener('click',function(){
   var l=list(), x=l.pop();
   if(!x&&S.phase==='backs'&&!S.backs.length){ S.phase='fronts'; }
   if(x&&x.url) setTimeout(function(){URL.revokeObjectURL(x.url)},3000);
-  S.T=newT(); updateUI(); say('Undone. Scan again when ready',1800);
+  S.T=newT(); S.prevSeg=null; touch(); updateUI(); say('Undone. Scan again when ready',1800);
 });
 $('nextpass').addEventListener('click',toBacks);
 $('modeChip').addEventListener('click',function(){S.mode=S.mode==='graded'?'raw':'graded';S.T=newT();S.m=null;updateUI();});
 $('dbgChip').addEventListener('click',function(){S.dbg=!S.dbg;$('dbg').style.display=S.dbg?'block':'none';});
-$('review').addEventListener('click',openReview);
-$('backScan').addEventListener('click',function(){show('cam');layout();startLoop();say('Center the next card, then tap Start sweep',3000);});
+$('review').addEventListener('click',function(){openReview()});
 function feedback(){ try{navigator.vibrate&&navigator.vibrate(40)}catch(e){} tick(); }
 var actxA=null;
 function ding(silent){ try{ actxA=actxA||new (window.AudioContext||window.webkitAudioContext)(); if(actxA.state==='suspended') actxA.resume(); }catch(e){} }
@@ -615,61 +826,67 @@ function tick(){
   }catch(e){}
 }
 
-/* ---------- review ---------- */
-function pad(n){return ('000'+n).slice(-3)}
-function names(i,side){return 'card-'+pad(i+1)+'-'+side+'.jpg'}
-function openReview(){
-  $('mod').classList.remove('on');
-  var h='';
-  [['fronts','Fronts'],['backs','Backs']].forEach(function(pr){
-    var l=S[pr[0]]; if(!l.length) return;
-    h+='<h3>'+pr[1]+' · '+count(l)+' of '+l.length+'</h3>';
-    l.forEach(function(x,i){
-      if(!x) h+='<button class="t ms" data-s="'+pr[0]+'" data-i="'+i+'">'+pr[1].slice(0,-1)+' '+(i+1)+'<br>missed<br>tap to fix</button>';
-      else h+='<button class="t'+(x.conf==='review'?' rv':'')+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(x.conf==='review'?'<b>check</b>':'')+'</button>';
-    });
+/* ---------- keep stills across reloads (IndexedDB; video is never stored) ---------- */
+function idbOpen(){
+  return new Promise(function(res){
+    try{
+      if(!window.indexedDB) return res(null);
+      var r=indexedDB.open('moose-scan-v05',1);
+      r.onupgradeneeded=function(){ r.result.createObjectStore('sessions',{keyPath:'id'}); };
+      r.onsuccess=function(){ res(r.result); };
+      r.onerror=function(){ res(null); };
+      r.onblocked=function(){ res(null); };
+    }catch(e){ res(null); }
   });
-  $('grid').innerHTML=h||'<p style="grid-column:1/4;color:#a79d86">Nothing captured yet.</p>';
-  var fl=S.fronts.length,bl=S.backs.length;
-  $('revP').textContent='Fronts: '+count(S.fronts)+' · Backs: '+count(S.backs)+'. Tap a photo to remove or retake it. "Check" photos were a bit less clear. Backs match fronts by order.';
-  $('dlZip').disabled=!(count(S.fronts)+count(S.backs));
-  var v='';
-  S.videos.forEach(function(x,i){v+='<a class="ghost-btn" style="display:block;text-align:center;text-decoration:none;line-height:26px;font-size:14px" href="'+x.url+'" download="'+x.name+'">Video · '+x.name+' · '+(x.size/1048576).toFixed(1)+' MB</a>'});
-  if(!S.videos.length) v='<p style="margin:0;color:#a79d86;font-size:13px">'+(CAN_REC?'No video was recorded yet.':"Video saving isn't supported on this browser, so only photos are saved.")+'</p>';
-  $('vids').innerHTML=v;
-  $('addMan').style.display=(list().length<cap())?'block':'none';
-  show('rev');
 }
-$('grid').addEventListener('click',function(e){
-  var t=e.target.closest('.t'); if(!t) return;
-  var side=t.dataset.s,i=+t.dataset.i,x=S[side][i],lab=(side==='fronts'?'Front ':'Back ')+(i+1);
-  $('vT').textContent=lab+(x&&x.conf==='review'?' · a bit less clear':'');
-  var im=$('vImg'); if(x){im.src=x.url;im.style.display='block'}else{im.style.display='none'}
-  var b=$('vB'); b.innerHTML='';
-  function add(txt,cls,fn){var e2=document.createElement('button');e2.className=cls;e2.textContent=txt;e2.onclick=fn;b.appendChild(e2)}
-  add(x?'Retake this one':'Capture this one','gold-btn',function(){startManual(side,i)});
-  add(x?'Remove (false detection)':'Remove this empty slot','ghost-btn',function(){
-    var l=S[side].splice(i,1)[0]; if(l&&l.url) setTimeout(function(){URL.revokeObjectURL(l.url)},3000);
-    $('viewer').classList.remove('on'); openReview(); updateUI();
+function ser(s){
+  function it(x){ return x?{blob:x.blob,w:x.w,h:x.h,conf:x.conf,score:x.score,manual:!!x.manual,sec:x.sec,gray:x.gray,AH:x.AH}:null; }
+  return {id:s.id,num:s.num,ts:s.ts,mode:s.mode,flow:s.flow,phase:s.phase,saved:s.saved,target:s.target,nvid:s.videos.length||(s.videoLost?1:0),fronts:s.fronts.map(it),backs:s.backs.map(it)};
+}
+function persist(s){
+  if(!S.db||!s||isEmpty(s)) return Promise.resolve(false);
+  var blobsOk=s.fronts.concat(s.backs).every(function(x){return !x||x.blob});
+  if(!blobsOk) return Promise.resolve(false);
+  return new Promise(function(res){
+    try{
+      var tx=S.db.transaction('sessions','readwrite'); tx.objectStore('sessions').put(ser(s));
+      tx.oncomplete=function(){ res(true); }; tx.onerror=tx.onabort=function(){ res(false); };
+    }catch(e){ res(false); }
   });
-  add('Keep','ghost-btn',function(){$('viewer').classList.remove('on')});
-  $('viewer').classList.add('on');
-});
-$('addMan').addEventListener('click',function(){
-  var l=list(); if(l.length>=cap()) return;
-  l.push(null); startManual(S.phase,l.length-1);
-});
-$('startOver').addEventListener('click',function(){
-  if(!confirm('Start over? This clears all photos and videos from this page.')) return;
-  S.fronts.concat(S.backs).forEach(function(x){x&&x.url&&URL.revokeObjectURL(x.url)});
-  S.videos.forEach(function(x){URL.revokeObjectURL(x.url)});
-  newSession(); show('cam'); layout(); startLoop();
-});
-// minimal store-only zip
+}
+var pTimers={};
+function schedPersist(s){
+  clearTimeout(pTimers[s.id]);
+  pTimers[s.id]=setTimeout(function(){ if(S.pend>0) return schedPersist(s); persist(s); },500);
+}
+function idbDel(id){
+  if(!S.db) return;
+  try{ S.db.transaction('sessions','readwrite').objectStore('sessions').delete(id); }catch(e){}
+}
+function idbAll(){
+  return new Promise(function(res){
+    if(!S.db) return res([]);
+    try{ var q=S.db.transaction('sessions','readonly').objectStore('sessions').getAll(); q.onsuccess=function(){res(q.result||[])}; q.onerror=function(){res([])}; }catch(e){ res([]); }
+  });
+}
+async function restore(){
+  var rows=await idbAll(), maxN=0;
+  rows.sort(function(a,b){return a.ts-b.ts});
+  rows.forEach(function(r){
+    function it(x){ if(!x||!x.blob) return null; return {blob:x.blob,url:URL.createObjectURL(x.blob),w:x.w,h:x.h,conf:x.conf,score:x.score,manual:x.manual,sec:x.sec,gray:x.gray,AH:x.AH}; }
+    var s={id:r.id,num:r.num,ts:r.ts,mode:r.mode,flow:r.flow,phase:r.phase||'fronts',fronts:(r.fronts||[]).map(it),backs:(r.backs||[]).map(it),videos:[],
+      sec:{fronts:1,backs:1},saved:!!r.saved,target:r.target||null,videoLost:r.nvid>0,ver:0,zip:null,zipP:null};
+    if(count(s.fronts)+count(s.backs)===0) { idbDel(r.id); return; }
+    S.sessions.push(s); if(r.num>maxN) maxN=r.num;
+  });
+  S.nextNum=maxN+1;
+}
+
+/* ---------- zip (built in the background, with progress) ---------- */
 var CRC=(function(){var t=[],c,n,k;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(u){var c=0xFFFFFFFF,i;for(i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
 function le(v,n){var a=[],i;for(i=0;i<n;i++)a.push((v>>>(8*i))&255);return a}
-async function makeZip(files){
+async function makeZip(files,onp){
   var enc=new TextEncoder(),parts=[],cd=[],off=0,d=new Date();
   var dt=((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1)), dd=(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate());
   for(var i=0;i<files.length;i++){
@@ -678,35 +895,300 @@ async function makeZip(files){
     parts.push(new Uint8Array(lh),nm,data);
     cd.push(new Uint8Array([0x50,0x4b,1,2].concat(le(20,2),le(20,2),le(0,2),le(0,2),le(dt,2),le(dd,2),le(c,4),le(data.length,4),le(data.length,4),le(nm.length,2),le(0,2),le(0,2),le(0,2),le(0,2),le(0,4),le(off,4))),nm);
     off+=lh.length+nm.length+data.length;
+    if(onp) onp((i+1)/files.length);
+    await sleep(0);
   }
   var cdSize=0;cd.forEach(function(p){cdSize+=p.length});
   var end=new Uint8Array([0x50,0x4b,5,6].concat(le(0,2),le(0,2),le(files.length,2),le(files.length,2),le(cdSize,4),le(off,4),le(0,2)));
   return new Blob(parts.concat(cd,[end]),{type:'application/zip'});
 }
-$('dlZip').addEventListener('click',async function(){
-  var btn=$('dlZip'),old=btn.textContent;btn.textContent='Packing…';btn.disabled=true;
-  try{
-    var files=[],man='Moose Cards Guided Scan v0.4 (row video scan)\nGuide: '+S.mode+'\nFlow: '+S.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
-    var n=Math.max(S.fronts.length,S.backs.length);
-    for(var i=0;i<n;i++){
-      var f=S.fronts[i],b=S.backs[i];
-      if(f&&f.blob) files.push({name:names(i,'front'),blob:f.blob});
-      if(b&&b.blob) files.push({name:names(i,'back'),blob:b.blob});
-      man+='card '+pad(i+1)+': front '+(f?f.conf+(f.manual?' (manual)':''):'missed')+', back '+(b?b.conf+(b.manual?' (manual)':''):(S.backs.length?'missed':'none'))+'\n';
+function pad(n){return ('000'+n).slice(-3)}
+function names(i,side){return 'card-'+pad(i+1)+'-'+side+'.jpg'}
+function prepZip(s,onp){
+  if(s.zip) { if(onp) onp(1); return Promise.resolve(s.zip); }
+  if(s.zipP) return s.zipP;
+  var v=s.ver;
+  var files=[],man='Moose Cards Guided Scan v0.5 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
+  var n=Math.max(s.fronts.length,s.backs.length);
+  for(var i=0;i<n;i++){
+    var f=s.fronts[i],b=s.backs[i];
+    if(f&&f.blob) files.push({name:names(i,'front'),blob:f.blob});
+    if(b&&b.blob) files.push({name:names(i,'back'),blob:b.blob});
+    man+='card '+pad(i+1)+': front '+(f?f.conf+(f.manual?' (manual)':''):'missed')+', back '+(b?b.conf+(b.manual?' (manual)':''):(s.backs.length?'missed':'none'))+'\n';
+  }
+  s.videos.forEach(function(x){man+='video: '+x.name+' (separate file)\n'});
+  files.push({name:'manifest.txt',blob:new Blob([man],{type:'text/plain'})});
+  var p=makeZip(files,onp).then(function(z){ if(s.ver===v){ s.zip=z; s.zipP=null; } return z; },function(e){ s.zipP=null; throw e; });
+  s.zipP=p; return p;
+}
+function mb(b){return (b/1048576).toFixed(1)+' MB'}
+
+/* ---------- home ---------- */
+function sessStats(s){
+  computeDups(s.fronts); computeDups(s.backs);
+  var f=count(s.fronts), b=count(s.backs), look=0, dups=0;
+  [s.fronts,s.backs].forEach(function(l){ l.forEach(function(x){ if(!x||x.conf==='review') look++; if(x&&x.dup) dups++; }); });
+  return {f:f,b:b,look:look,dups:dups};
+}
+function renderHome(){
+  var h='', rows=S.sessions.filter(function(s){return !isEmpty(s)}).slice().sort(function(a,b){return b.ts-a.ts});
+  rows.forEach(function(s){
+    var st=sessStats(s), t2=st.f+' card'+(st.f===1?'':'s');
+    if(st.look) t2+=' · '+st.look+' need a look';
+    if(st.dups) t2+=' · '+st.dups+' maybe duplicate';
+    t2+=' · '+(st.b?('backs '+st.b+' of '+s.fronts.length):(s.fronts.length?'backs to go':'no photos'));
+    h+='<button class="srow" data-id="'+s.id+'"><div><div class="t1">Section '+s.num+'</div><div class="t2">'+t2+'</div></div><span class="st'+(s.saved?' ok':'')+'">'+(s.saved?'Saved ✓':'Not saved yet')+'</span></button>';
+  });
+  $('sessList').innerHTML=h||'<div class="empty">No scans yet. Tap <b>Start a scan</b> and your cards will show up here.</div>';
+  $('clearAll').style.display=rows.length?'inline-block':'none';
+  var w=$('homeWarn');
+  if(!S.db){ w.style.display='block'; w.textContent="Heads up: this browser can't keep scans after you close the page. Save to your phone before you leave."; }
+  else w.style.display='none';
+}
+$('sessList').addEventListener('click',function(e){
+  var b=e.target.closest('.srow'); if(!b) return;
+  var s=S.sessions.filter(function(x){return x.id===b.dataset.id})[0]; if(s) openReview(s);
+});
+$('startScan').addEventListener('click',function(){ show('pre'); });
+$('clearAll').addEventListener('click',function(){
+  askDlg('Clear all scans?','This removes every scan and photo from this phone. Anything you saved to your phone stays saved.',[
+    {label:'Clear everything',cls:'ghost',fn:function(){ S.sessions.forEach(function(s){ dropSession(s); }); S.sessions=[]; renderHome(); toast('All cleared.'); }},
+    {label:'Keep my scans',cls:'gold'}]);
+});
+function dropSession(s){
+  s.fronts.concat(s.backs).forEach(function(x){x&&x.url&&URL.revokeObjectURL(x.url)});
+  s.videos.forEach(function(v){URL.revokeObjectURL(v.url)}); idbDel(s.id);
+}
+
+/* ---------- going home (always asks first if a scan isn't saved) ---------- */
+function unsavedCur(){ var s=S.cur; return s&&!isEmpty(s)&&!s.saved?s:null; }
+function goHome(){
+  if(S.state==='stopping'||S.saveBusy){ toast('One moment, almost done…'); return; }
+  if(S.state==='scanning'){
+    askDlg('Stop this scan?','You are in the middle of a sweep. I can stop now and keep the cards I found.',[
+      {label:'Stop and save',cls:'gold',fn:function(){ stopScan('manual'); }},
+      {label:'Keep scanning',cls:'ghost'}]);
+    return;
+  }
+  if(S.state==='manual'){ S.manual=null; S.state='ready'; }
+  var s=unsavedCur();
+  if(s&&!$('home').classList.contains('on')){
+    var lost=!S.db?' If you leave this page, they are gone.':' Your photos stay in Your scans on this phone, but the video is only kept until you close this page.';
+    askDlg('Not saved to your phone yet','Save first so nothing gets lost.'+lost,[
+      {label:'Save first',cls:'gold',fn:function(){ openReview(s); saveToPhone(s,true); }},
+      {label:'Go home anyway',cls:'ghost',fn:function(){ goHomeNow(); }},
+      {label:'Stay here',cls:'ghost'}]);
+    return;
+  }
+  goHomeNow();
+}
+function goHomeNow(){
+  var s=S.cur;
+  if(s&&isEmpty(s)) S.sessions=S.sessions.filter(function(x){return x!==s});
+  stopCam(); S.state='ready'; S.manual=null; S.cur=null; S.fronts=[]; S.backs=[]; S.videos=[]; S.sec={fronts:0,backs:0}; S.phase='fronts'; S.revNote='';
+  closeDlg(); $('mod').classList.remove('on'); $('viewer').classList.remove('on');
+  renderHome(); show('home');
+}
+[].forEach.call(document.querySelectorAll('.homeb'),function(b){ b.addEventListener('click',goHome); });
+
+/* ---------- results screen ("Your cards") ---------- */
+function openReview(s){
+  if(s&&s.fronts&&s!==S.cur) loadSession(s);
+  if(!S.cur) return;
+  $('mod').classList.remove('on'); $('viewer').classList.remove('on');
+  renderRev(); show('rev'); $('revScroll').scrollTop=0;
+}
+function renderRev(){
+  var s=S.cur; if(!s) return;
+  var st=sessStats(s), h='', dupN=st.dups;
+  $('revSec').textContent=s.num;
+  [['fronts','Fronts'],['backs','Backs']].forEach(function(pr){
+    var l=s[pr[0]]; if(!l.length) return;
+    h+='<h3>'+pr[1]+' · '+count(l)+' of '+l.length+'</h3>';
+    l.forEach(function(x,i){
+      if(!x) h+='<button class="t ms" data-s="'+pr[0]+'" data-i="'+i+'">'+pr[1].slice(0,-1)+' '+(i+1)+'<br>missed<br>tap to fix</button>';
+      else h+='<button class="t'+(x.dup?' dp':(x.conf==='review'?' rv':''))+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(x.dup?'<i>Looks like a duplicate</i>':(x.conf==='review'?'<b>check</b>':''))+'</button>';
+    });
+  });
+  $('grid').innerHTML=h||'<p style="grid-column:1/5;color:#a79d86">Nothing captured yet.</p>';
+  var sum='<span class="big"><b>'+st.f+'</b> card'+(st.f===1?'':'s')+' found</span>';
+  if(st.look) sum+='<span class="pill">'+st.look+' need a look</span>';
+  if(dupN) sum+='<span class="pill red">'+dupN+' look like duplicates</span>';
+  if(st.b||s.backs.length) sum+='<span class="pill" style="border-color:#6f664f;color:#a79d86">Backs '+st.b+' of '+s.fronts.length+'</span>';
+  $('sum').innerHTML=sum;
+  var rn=$('revNote'); rn.style.display=S.revNote?'block':'none'; rn.textContent=S.revNote||'';
+  var dn=$('dupNote'); dn.style.display=dupN?'block':'none';
+  dn.textContent=dupN?('Red tiles look like the same card twice. Tap one to merge it with the previous card, or remove it.'):'';
+  // count editor
+  var tg=(s.target==null)?s.fronts.length:s.target; $('cin').value=tg; cedUpdate();
+  // what next
+  var needBacks=s.fronts.length>0&&s.backs.length<s.fronts.length;
+  var nb=$('nxBacks'); nb.style.display=needBacks?'block':'none';
+  nb.firstChild.textContent=s.backs.length?'Scan more backs':'Scan the backs';
+  nb.className=needBacks?'gold-btn':'ghost-btn';
+  var ns=$('nxSave'); ns.className='gold-btn'+((needBacks&&!s.saved)?' dim':'');
+  $('addMan').style.display=(list('fronts').length<CAP)?'inline-block':'none';
+  $('keepScan').style.display=(s.phase==='backs'?s.backs.length<s.fronts.length:s.fronts.length<CAP)?'inline-block':'none';
+  refreshSave();
+}
+function refreshSave(){
+  var s=S.cur; if(!s) return;
+  var b=$('nxSave'), info='';
+  if(S.saveBusy){ b.disabled=true; b.firstChild.textContent='Saving…'; }
+  else if(!s.zip){
+    b.disabled=true; b.firstChild.textContent='Getting ready…';
+    if(!s.zipP) prepZip(s).then(function(){ if(S.cur===s) refreshSave(); },function(){});
+    else s.zipP.then(function(){ if(S.cur===s) refreshSave(); },function(){});
+  }else{ b.disabled=false; b.firstChild.textContent=s.saved?'Save again':'Save to my phone'; }
+  if(s.zip) info='Photos zip '+mb(s.zip.size);
+  var vs=s.videos.reduce(function(a,v){return a+v.size},0);
+  if(vs) info+=' · Video '+mb(vs);
+  else if(s.videoLost) info+=" · The video isn't kept after you close the page";
+  else if(!CAN_REC) info+=" · This browser can't save video";
+  if(s.saved) info+=' · Saved ✓';
+  $('saveInfo').textContent=info;
+}
+function cedUpdate(){
+  var s=S.cur, v=Math.max(0,Math.min(60,parseInt($('cin').value,10)||0)), cur=s.fronts.length, h='', go=$('cedGo');
+  if(v===cur){ h='This is the number I found. Change it if your count is different.'; go.style.display='none'; }
+  else if(v<cur){ h='I\'ll remove '+(cur-v)+' likely duplicate'+(cur-v===1?'':'s')+' first. If I run out, tap photos to remove the rest.'; go.style.display='block'; go.textContent='Update count to '+v; }
+  else { h='I\'ll add '+(v-cur)+' empty slot'+(v-cur===1?'':'s')+' you can fill by hand.'; go.style.display='block'; go.textContent='Update count to '+v; }
+  $('cedH').textContent=h;
+}
+$('cm').addEventListener('click',function(){ $('cin').value=Math.max(0,(parseInt($('cin').value,10)||0)-1); cedUpdate(); });
+$('cp').addEventListener('click',function(){ $('cin').value=Math.min(60,(parseInt($('cin').value,10)||0)+1); cedUpdate(); });
+$('cin').addEventListener('input',cedUpdate);
+function mergeInto(prev,x){            // keep the better photo in prev's slot
+  var better=x.manual&&!prev.manual?true:(!prev.manual&&(x.score>prev.score));
+  if(better){ var old=prev.url; ['blob','url','w','h','conf','score','gray','AH','manual'].forEach(function(k){prev[k]=x[k]}); if(old) setTimeout(function(){URL.revokeObjectURL(old)},3000); }
+  else if(x.url) setTimeout(function(){URL.revokeObjectURL(x.url)},3000);
+}
+function mergeAt(l,i){ var p=l[i-1],x=l[i]; mergeInto(p,x); l.splice(i,1); }
+$('cedGo').addEventListener('click',function(){
+  var s=S.cur, v=Math.max(0,Math.min(60,parseInt($('cin').value,10)||0)), l=s.fronts, msg='';
+  if(v<l.length){
+    var need=l.length-v, did=0;
+    while(did<need){
+      computeDups(l); var bi=-1,bs=1e9;
+      l.forEach(function(x,i){ if(x&&x.dup&&x.simPrev<bs){bs=x.simPrev;bi=i} });
+      if(bi<1) break; mergeAt(l,bi); did++;
     }
-    S.videos.forEach(function(v){man+='video: '+v.name+' (not in this zip; download it separately)\n'});
-    files.push({name:'manifest.txt',blob:new Blob([man],{type:'text/plain'})});
-    var z=await makeZip(files),u=URL.createObjectURL(z),a=document.createElement('a');
-    S.lastZip=z.size;
-    a.href=u;a.download='moose-cards-scan.zip';document.body.appendChild(a);a.click();a.remove();
-    setTimeout(function(){URL.revokeObjectURL(u)},60000);
-  }catch(e){ $('revP').textContent="The zip didn't build. Tap a photo to open it, or try again."; }
-  btn.textContent=old;btn.disabled=false;
+    while(did<need){ var mi=-1; l.forEach(function(x,i){ if(!x) mi=i }); if(mi<0) break; l.splice(mi,1); did++; }
+    while(did<need){
+      computeDups(l); var bj=-1,bv=1e9;
+      l.forEach(function(x,i){ if(x&&i>0&&l[i-1]&&typeof x.simPrev==='number'&&x.simPrev<bv){bv=x.simPrev;bj=i} });
+      if(bj<1) break; mergeAt(l,bj); did++;
+    }
+    msg=did===need?('Count is now '+v+'.'):('Removed '+did+'. Tap photos to remove '+(need-did)+' more.');
+  }else{
+    while(l.length<v) l.push(null);
+    msg='Added empty slots. Tap each one to capture it.';
+  }
+  s.target=(l.length===v)?v:null; touch(s); renderRev(); toast(msg,3200);
+});
+$('grid').addEventListener('click',function(e){
+  var t=e.target.closest('.t'); if(!t) return;
+  var side=t.dataset.s,i=+t.dataset.i,l=S.cur[side],x=l[i],lab=(side==='fronts'?'Front ':'Back ')+(i+1);
+  $('vT').textContent=lab+(x&&x.dup?' · looks like a duplicate':(x&&x.conf==='review'?' · a bit less clear':''));
+  $('vH').textContent=x?(x.dup?('It looks like '+(side==='fronts'?'Front ':'Back ')+i+' again. Merge keeps the clearer photo of the two.'):(i>0&&l[i-1]?'Same card as the one before? Merge them. Otherwise keep it.':'')):'This card was missed.';
+  var im=$('vImg'); if(x){im.src=x.url;im.style.display='block'}else{im.style.display='none'}
+  var b=$('vB'); b.innerHTML='';
+  function add(txt,cls,fn){var e2=document.createElement('button');e2.className=cls;e2.textContent=txt;e2.onclick=fn;b.appendChild(e2)}
+  add(x?'Retake this one':'Capture this one','gold-btn',function(){startManual(side,i)});
+  if(x&&i>0&&l[i-1]) add('Merge with previous','ghost-btn',function(){ mergeAt(l,i); S.cur.target=null; touch(); $('viewer').classList.remove('on'); renderRev(); toast('Merged. Kept the clearer photo.'); });
+  add(x?(x.dup?'Remove duplicate':'Remove this photo'):'Remove this empty slot','ghost-btn',function(){
+    var r=l.splice(i,1)[0]; if(r&&r.url) setTimeout(function(){URL.revokeObjectURL(r.url)},3000);
+    S.cur.target=null; touch(); $('viewer').classList.remove('on'); renderRev(); updateUI();
+    toast(side==='fronts'&&S.backs.length?'Removed. Backs match by order, so check the backs too.':'Removed.',3000);
+  });
+  add('Keep','ghost-btn',function(){$('viewer').classList.remove('on')});
+  $('viewer').classList.add('on');
+});
+$('addMan').addEventListener('click',function(){
+  var l=list('fronts'); if(l.length>=CAP) return;
+  S.phase='fronts'; l.push(null); startManual('fronts',l.length-1);
+});
+$('keepScan').addEventListener('click',async function(){
+  try{ await ensureCam(); }catch(e){ toast(friendlyErr(e),4000,true); return; }
+  goCam('Center the next card, then tap Start sweep',3000);
+});
+$('delScan').addEventListener('click',function(){
+  var s=S.cur;
+  askDlg('Delete this scan?','This removes Section '+s.num+' photos and video from this page. Photos you already saved to your phone stay saved.',[
+    {label:'Delete it',cls:'ghost',fn:function(){ dropSession(s); S.sessions=S.sessions.filter(function(x){return x!==s}); S.cur=null; goHomeNow(); toast('Deleted.'); }},
+    {label:'Keep it',cls:'gold'}]);
+});
+
+/* what next */
+$('nxBacks').addEventListener('click',async function(){
+  if(S.busy) return; S.busy=true; var s=S.cur;
+  try{ await ensureCam(); }catch(e){ toast(friendlyErr(e),4000,true); S.busy=false; return; }
+  S.busy=false; loadSession(s); S.phase='backs'; goCam(); toBacks();
+});
+$('nxSec').addEventListener('click',async function(){
+  if(S.busy) return; S.busy=true; var s=S.cur;
+  try{ await ensureCam(); }catch(e){ toast(friendlyErr(e),4000,true); S.busy=false; return; }
+  S.busy=false; S.mode=s.mode; S.flow=s.flow; createSession(); goCam('Section '+S.cur.num+'. Fit one card inside the frame, then tap Start sweep.',4000);
+});
+$('nxSave').addEventListener('click',function(){ saveToPhone(S.cur,false); });
+$('nxHome').addEventListener('click',goHome);
+
+/* ---------- save to phone: share sheet when possible, else tap-links. Never navigates away. ---------- */
+function markSaved(s){ s.saved=true; persist(s); if(S.cur===s&&$('rev').classList.contains('on')) refreshSave(); }
+function saveToPhone(s,thenHome){
+  if(S.saveBusy) return;
+  if(!s.zip){ toast('Getting your photos ready. One moment…',2200); return; }
+  S.saveBusy=true; refreshSave();
+  var zf=new File([s.zip],'moose-cards-section-'+s.num+'.zip',{type:'application/zip'}), files=[zf], vfiles=[];
+  s.videos.forEach(function(v){ var f=new File([v.blob],v.name,{type:v.blob.type||'video/mp4'}); files.push(f); vfiles.push(f); });
+  function finish(msg){ S.saveBusy=false; markSaved(s); refreshSave(); toast(msg||"Saved. You're all set.",3500); if(thenHome) setTimeout(function(){ if(!S.saveBusy) goHomeNow(); },1100); }
+  function cancel(){ S.saveBusy=false; refreshSave(); toast('Not saved yet. Tap Save when you are ready.',3500,true); }
+  function links(items,done){
+    var left=items.length;
+    var btns=items.map(function(it){ var u=URL.createObjectURL(it.blob); setTimeout(function(){URL.revokeObjectURL(u)},300000);
+      return {label:it.label,cls:'gold',href:u,download:it.name,keep:true,fn:function(ev){ var el=ev.currentTarget; if(!el.dataset.tapped){el.dataset.tapped=1;el.textContent='✓ '+it.label;left--;}
+        toast('Saving… check your Downloads.',2000);
+        if(left<=0){ setTimeout(function(){closeDlg();done();},700); } return true; }}; });
+    btns.push({label:'Not now',cls:'ghost',fn:function(){ cancel(); }});
+    askDlg('Tap to save','Tap each button once. You will stay on this screen.',btns);
+  }
+  var all=[{label:'Photos (.zip)',blob:s.zip,name:zf.name}].concat(s.videos.map(function(v){return {label:'Video ('+mb(v.size)+')',blob:v.blob,name:v.name}}));
+  var canS=function(f){ try{ return navigator.canShare&&navigator.canShare({files:f}); }catch(e){ return false; } };
+  if(navigator.share&&navigator.canShare&&(canS(files)||canS([zf]))){
+    var useAll=canS(files), use=useAll?files:[zf];
+    navigator.share({files:use,title:'Moose Cards scan'}).then(function(){
+      if(!useAll&&vfiles.length) { finish('Photos saved. Tap the buttons for the video.'); links(all.slice(1),function(){toast("Saved. You're all set.",3000)}); }
+      else finish();
+    },function(e){
+      if(e&&e.name==='AbortError') cancel(); else links(all,function(){finish()});
+    });
+    return;
+  }
+  links(all,function(){finish()});
+}
+
+/* ---------- leaving the page ---------- */
+window.addEventListener('beforeunload',function(e){
+  var risk=S.state==='scanning'||S.state==='stopping'||S.sessions.some(function(s){ return !isEmpty(s)&&!s.saved&&(!S.db||s.videos.length); });
+  if(risk){ e.preventDefault(); e.returnValue=''; return ''; }
 });
 document.addEventListener('visibilitychange',function(){
-  if(!document.hidden&&S.wake===null&&navigator.wakeLock&&$('cam').classList.contains('on')){try{navigator.wakeLock.request('screen').then(function(w){S.wake=w})}catch(e){}}
+  if(document.hidden){ S.sessions.forEach(function(s){ if(!s.saved&&!isEmpty(s)&&S.pend===0) persist(s); }); }
+  else if(S.wake===null&&navigator.wakeLock&&$('cam').classList.contains('on')){try{navigator.wakeLock.request('screen').then(function(w){S.wake=w})}catch(e){}}
 });
-window.__scan=S; // for testing
+
+/* ---------- start-up ---------- */
+$('go').addEventListener('click',async function(){
+  if(S.busy) return; S.busy=true; $('err').textContent=''; ding(true);
+  try{ await ensureCam(); }catch(e){ $('err').textContent=friendlyErr(e); S.busy=false; return; }
+  S.busy=false; createSession(); goCam('Fit one card inside the frame, then tap Start sweep.',4000);
+});
+window.__scan=S; window.__sim=simSAD; window.__dbg={simSAD:simSAD}; window.__render=renderRev; // for testing
+(async function init(){
+  S.db=await idbOpen();
+  try{ await restore(); }catch(e){}
+  renderHome();
+})();
 })();
 </script>
 </body>
