@@ -1,4 +1,4 @@
-/* Moose Cards v0.8 - Clean up photo. Runs only on this phone, in plain canvas JS.
+/* Collectors Desk v0.9 (Mr. Moose Enterprises, LLC) - Clean up photo. Runs only on this phone, in plain canvas JS.
    What it does: finds the card (or slab / case) outline, straightens it, evens out light and color a little,
    softens glare a little (highlight compression only), sharpens slightly, and puts it on neutral gray.
    What it never does: invent detail, fill in, smooth or hide scratches, creases, dents, wear or centering. */

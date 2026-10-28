@@ -19,7 +19,7 @@
 
 ## Scan the fronts
 
-1. On Home, tap the big gold **Start a scan**.
+1. On Home, tap the big gold **Scan cards**.
 2. Tap **Start camera**. Hold your phone above the first card.
 3. Tap **Start sweep**.
 4. **Move slowly** across the row. Two rows? Glide to the end of the first row, drop down to the next one, and glide back the other way. Any direction works.
@@ -157,6 +157,12 @@ You're doing great. Every card you scan is one less to wonder about.
 - v0.5.1: flip-through Review screen (large front/back, next/prev or swipe, Sell/Keep/Grade labels kept on the phone and added to the zip as cards.csv), Send screen (Share with files, Email to myself, Send to my collection coming soon). Backup: `index.html.bak-v0.5`.
 - v0.7: Binder (IndexedDB, local only): Binders home tab, All cards plus custom and inventory binders, card detail with notes, own photos, status, cost and sold profit, Name your cards quick entry (optional on-device auto-read), export JSON/CSV/zip and JSON import, storage.persist(). Scan: always-visible Capture now button, timed-capture fallback when tracking looks stuck, Pause picking mode, Info/debug panel. Earlier scans move into the Binder automatically. Split into index.html, binder.js, binder.css. Backup: `index.html.bak-v0.6`.
 - v0.8: Clean up photo (per card and batch, with Original toggle, Undo all), Listing sheet (editable draft, "check this" badges, copy text, listing CSV), sport field, undo for deleted cards, capture tips on the scan screens, near-black and gold palette with walnut surface variables (`:root` in index.html).
+
+- v0.9: Home tab is the landing screen (featured-cards carousel with arrows and swipe, collection at a glance, recent activity, one gold **Scan cards** button, one Next step card). **Protect my binder** status (green/yellow/red, last backed up, cards not yet backed up), a plain-words storage-permission line, backup nudges (after a scan, and when overdue), one-tap **Save backup** (share sheet with a file, or download; marked saved only when it completes), **Restore from backup** with preview, merge-without-overwrite and Undo. New **What next?** screen: a big responsive gallery with the choices in a side panel (iPad landscape) or a bottom bar (portrait/phone), and tap-to-enlarge. **Name your cards** now reads each photo on the device (bundled tesseract.js in `ocr/`, works offline, Web Worker, progress bar) and pre-fills player, team, year, set, card number, serial and auto/rookie flags only when it is sure, each marked "check this" until you confirm or edit. It never guesses parallels, condition, flaws or price. Black, gold and walnut colours as `:root` variables. App name Collectors Desk, (c) Mr. Moose Enterprises, LLC. Measured accuracy: `research/ocr-accuracy-v09.md`. Backup of v0.8: `*.bak-v0.8`.
+
+## One-line test script (v0.9)
+
+> Open the page (Home shows the empty welcome), tap Scan cards > Start camera > Start sweep, sweep a few cards, tap Stop; on What next? tap a photo to enlarge it, tap Name your cards and let the progress bar finish, tap Next and Back, edit one field, tap one "check this" badge, then tap Open my Binder > a card > Listing sheet; go to the Backup tab, tap Save backup (the card turns green), then Restore from backup with that file (it says "0 new"), and reload to confirm everything is still there.
 
 ## One-line test script (v0.8)
 

@@ -1,4 +1,4 @@
-/* Moose Cards Guided Scan v0.8 - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.9 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -15,7 +15,7 @@ function teamsFor(sp){ return TEAMS_BY[sp]||TEAMS; }
 var NICK={}; TEAMS.forEach(function(t){ var p=t.split(' '), k=p[p.length-1].toLowerCase(); if(/^(sox|jays|blazers)$/.test(k)) k=p.slice(-2).join(' ').toLowerCase(); (NICK[k]=NICK[k]||[]).push(t); });
 NICK['d-backs']=['Arizona Diamondbacks']; NICK.indians=['Cleveland Guardians']; NICK.expos=['Washington Nationals']; NICK.sixers=['Philadelphia 76ers'];
 var GRADERS=['PSA','BGS','SGC','CGC','Other'];
-var B={db:null,ready:false,cards:[],binders:[],gone:{},view:{id:'all',pick:null},sel:{},selMode:false,q:Promise.resolve(),tab:'b',saveT:{}};
+var B={db:null,ready:false,cards:[],binders:[],gone:{},view:{id:'all',pick:null},sel:{},selMode:false,q:Promise.resolve(),tab:'h',saveT:{}};
 var urlMap=(window.WeakMap?new WeakMap():null);
 function urlOf(b){ if(!b) return ''; if(urlMap){ var u=urlMap.get(b); if(!u){u=URL.createObjectURL(b);urlMap.set(b,u);} return u; } return URL.createObjectURL(b); }
 function G(id){ return document.getElementById(id); }
@@ -42,7 +42,7 @@ function openDB(){
 function getAll(st){ return new Promise(function(res){ if(!B.db) return res([]); try{ var q=B.db.transaction(st,'readonly').objectStore(st).getAll(); q.onsuccess=function(){res(q.result||[])}; q.onerror=function(){res([])}; }catch(e){res([])} }); }
 function put(st,o){ return new Promise(function(res){ if(!B.db) return res(false); try{ var tx=B.db.transaction(st,'readwrite'); tx.objectStore(st).put(o); tx.oncomplete=function(){res(true)}; tx.onerror=tx.onabort=function(){res(false)}; }catch(e){res(false)} }); }
 function del(st,id){ return new Promise(function(res){ if(!B.db) return res(false); try{ var tx=B.db.transaction(st,'readwrite'); tx.objectStore(st).delete(id); tx.oncomplete=function(){res(true)}; tx.onerror=tx.onabort=function(){res(false)}; }catch(e){res(false)} }); }
-function saveCard(c){ clearTimeout(B.saveT[c.id]); B.saveT[c.id]=setTimeout(function(){ delete B.saveT[c.id]; put('cards',c); },350); }
+function saveCard(c){ clearTimeout(B.saveT[c.id]); c.upd=Date.now(); B.saveT[c.id]=setTimeout(function(){ delete B.saveT[c.id]; put('cards',c); },350); }
 function flush(){ Object.keys(B.saveT).forEach(function(id){ clearTimeout(B.saveT[id]); delete B.saveT[id]; var c=byId(id); if(c) put('cards',c); }); }
 function saveBinder(b){ return put('binders',b); }
 function byId(id){ for(var i=0;i<B.cards.length;i++) if(B.cards[i].id===id) return B.cards[i]; return null; }
@@ -54,7 +54,7 @@ B.init=async function(){
   var cs=await getAll('cards'), bs=await getAll('binders'), gs=await getAll('gone');
   B.cards=cs; B.binders=bs.sort(function(a,b){return a.ts-b.ts}); gs.forEach(function(g){B.gone[g.id]=1});
   B.cards.forEach(normCard);
-  B.ready=true; log('binder ready: '+B.cards.length+' cards, '+B.binders.length+' binders, db '+(B.db?'ok':'MISSING'));
+  B.ready=true; try{ askPersist(); }catch(e){} log('binder ready: '+B.cards.length+' cards, '+B.binders.length+' binders, db '+(B.db?'ok':'MISSING'));
   return B.cards.length;
 };
 B.hasDB=function(){return !!B.db};
@@ -91,12 +91,13 @@ async function doSync(s){
     if(f&&f.blob&&c.fsize!==f.blob.size){ c.front=f.blob; c.fsize=f.blob.size; c.thumb=await thumb(f.blob); if(c.clean&&c.clean.front){ delete c.clean.front; c.cthumb=null; } upd=true; }
     if(b&&b.blob&&c.bsize!==b.blob.size){ c.back=b.blob; c.bsize=b.blob.size; if(!c.front) c.thumb=await thumb(b.blob); if(c.clean&&c.clean.back){ delete c.clean.back; if(!c.front) c.cthumb=null; } upd=true; }
     if(!c.thumb&&(c.front||c.back)){ c.thumb=await thumb(c.front||c.back); upd=true; }
+    if(upd&&!isNew) c.upd=Date.now();
     if(isNew||upd) await put('cards',c);
   }
   // photos removed in the scan review (and never named or edited) leave the binder too
   var gone=B.cards.filter(function(c){return c.sid===s.id&&!seen[c.id]&&!c.edited&&!c.named});
   for(i=0;i<gone.length;i++) await removeCard(gone[i],false);
-  if(added){ log('binder: +'+added+' cards from section '+s.num); askPersist(); }
+  if(added){ log('binder: +'+added+' cards from section '+s.num); askPersist(); B.noteScan(added); }
   return added;
 }
 B.setLabelByUid=function(uid,label){ var c=byId(uid); if(c){ c.label=label||''; saveCard(c); } };
@@ -107,22 +108,85 @@ async function removeCard(c,tomb){
   if(tomb!==false){ B.gone[c.id]=1; await put('gone',{id:c.id}); }
 }
 
-/* ---------- storage permission + backup reminders ---------- */
-function askPersist(){
-  try{ if(navigator.storage&&navigator.storage.persist&&!lsGet('mc-persist-asked',false)){ lsSet('mc-persist-asked',true); navigator.storage.persist().then(function(ok){ log('storage.persist -> '+ok); if($('paneD')) renderBackup(); },function(){}); } }catch(e){}
+/* ---------- Protect my binder: storage permission, backup status, nudges (v0.9) ---------- */
+var HONEST='Your binder is stored on this device and browser. If you clear browser data, delete the app, or lose the device, it\u2019s erased unless you\u2019ve saved a backup.';
+var WHATS_IN='Includes every card: original photos, cleaned photos, names, notes and binders. Spreadsheet and listing exports are separate and don\u2019t replace a backup.';
+B.persist='unknown';
+function askPersist(force){
+  try{
+    if(!(navigator.storage&&navigator.storage.persist)){ B.persist='unsupported'; return; }
+    if(!force&&lsGet('mc-persist-asked',false)){ persistStatus().then(function(s){ B.persist=s; refreshProt(); }); return; }
+    lsSet('mc-persist-asked',true);
+    navigator.storage.persist().then(function(ok){ B.persist=ok?'on':'off'; log('storage.persist -> '+ok); refreshProt(); if(force) MC().toast(ok?'Done. Your browser will keep this binder safe from automatic clean-ups.':'Your browser said not now. That\u2019s okay. A saved backup is your safety net.',3600); },function(){ B.persist='off'; refreshProt(); });
+  }catch(e){}
 }
 function persistStatus(){
   return new Promise(function(res){
     try{ if(!(navigator.storage&&navigator.storage.persisted)) return res('unsupported'); navigator.storage.persisted().then(function(p){res(p?'on':'off')},function(){res('unsupported')}); }catch(e){res('unsupported')}
   });
 }
-function backupDue(){ if(!B.cards.length) return false; var t=lsGet('mc-lastexport',0); return !t||(Date.now()-t>14*864e5); }
+function persistWords(){
+  if(B.persist==='on') return 'Protected from automatic clean-ups \u2713 (your browser agreed to keep it)';
+  if(B.persist==='off') return 'Not granted. Your browser may clear it if the device runs low on space. A backup covers you';
+  if(B.persist==='unsupported') return 'Not available in this browser. A backup is the way to keep your binder safe';
+  return 'Checking\u2026';
+}
+function lastBackup(){ return lsGet('mc-lastexport',0); }
+function unsavedCount(){ var t=lastBackup(); return B.cards.filter(function(c){ return Math.max(c.ts||0,c.upd||0)>t; }).length; }
+/* green = everything is in your last backup. yellow = a few new/changed cards. red = never backed up, over 7 days with changes, or 25+ unsaved */
+function prot(){
+  var n=B.cards.length, t=lastBackup(), u=unsavedCount(), age=t?(Date.now()-t):0, lvl, head, line;
+  if(!n){ lvl='green'; head='Nothing to protect yet'; line='Scan some cards and this will keep watch for you.'; }
+  else if(!t){ lvl='red'; head='Not backed up yet'; line='One tap saves a copy you can keep in Files, Drive or email.'; }
+  else if(u>=25||(u>0&&age>7*864e5)){ lvl='red'; head='Time for a backup'; line=u+' card'+(u===1?'':'s')+' not yet backed up.'; }
+  else if(u>0){ lvl='yellow'; head='Mostly protected'; line=u+' card'+(u===1?'':'s')+' not yet backed up.'; }
+  else { lvl='green'; head='Protected'; line='Every card is in your latest backup.'; }
+  return {n:n,last:t,unsaved:u,lvl:lvl,head:head,line:line,due:n>0&&(!t||u>=25||(u>0&&age>7*864e5))};
+}
+function when(t){
+  if(!t) return 'Never';
+  var d=new Date(t), now=new Date(), tm=d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  var dd=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+  if(dd===0) return 'Today, '+tm; if(dd===1) return 'Yesterday, '+tm;
+  return d.toLocaleDateString([], {month:'short',day:'numeric',year:d.getFullYear()===now.getFullYear()?undefined:'numeric'})+', '+tm;
+}
+function protectHTML(attr,full){
+  var p=prot();
+  var h='<div class="prot '+p.lvl+'" id="protCard"><div class="pt"><i class="dot"></i><b>Protect my binder</b><span class="pstate">'+(p.lvl==='green'?'Green':p.lvl==='yellow'?'Yellow':'Red')+' \u00b7 '+esc(p.head)+'</span></div>';
+  h+='<div class="pl">Last backed up: <b>'+esc(when(p.last))+'</b></div>';
+  h+='<div class="pl"><b>'+p.unsaved+'</b> card'+(p.unsaved===1?'':'s')+' not yet backed up'+(p.n&&!p.last?' (all of them)':'')+'</div>';
+  h+='<div class="pl small">Browser storage: '+esc(persistWords())+'</div>';
+  h+='<button class="'+(p.lvl==='green'?'ghost-btn':'gold-btn')+' psave" '+attr+'="savebk">Save backup</button>';
+  h+='<div class="pl small">'+esc(WHATS_IN)+'</div>';
+  if(full) h+='<p class="honest">'+esc(HONEST)+'</p>';
+  else h+='<details class="pdet"><summary>Where is my binder stored?</summary><p class="honest">'+esc(HONEST)+'</p></details>';
+  return h+'</div>';
+}
+function refreshProt(){
+  var e=$('protCard'); if(e&&B.tab==='h') renderHomeTab(); else if(e&&B.tab==='d') renderBackup();
+  var db=$('tabs').querySelector('[data-t="d"]'); if(db){ var p=prot(); db.classList.toggle('alert',p.lvl==='red'&&p.n>0); }
+}
+/* nudges: after a scan ("N new cards") and when overdue. Dismissible, never blocking. */
+function nudgeState(){ return lsGet('mc-nudge',{newN:0,newTs:0,snooze:0}); }
+B.noteScan=function(added){ if(!added) return; var s=nudgeState(); s.newN=(s.newN||0)+added; s.newTs=Date.now(); s.snooze=0; lsSet('mc-nudge',s); };
+function nudgeHTML(attr){
+  var p=prot(), s=nudgeState(); if(!p.n) return '';
+  var newN=Math.min(s.newN||0,p.unsaved);
+  if(s.newN&&!p.unsaved){ s.newN=0; lsSet('mc-nudge',s); newN=0; }
+  var msg='', k='';
+  if(newN>0){ msg='Save a backup of your '+newN+' new card'+(newN===1?'':'s')+'?'; k='new'; }
+  else if(p.due&&Date.now()>(s.snooze||0)){ msg=!p.last?'Your binder has no backup yet. Save one?':'It\u2019s been a while. Save a backup of your '+p.unsaved+' unsaved card'+(p.unsaved===1?'':'s')+'?'; k='due'; }
+  if(!msg) return '';
+  return '<div class="nudge" data-k="'+k+'"><span>'+esc(msg)+'</span><button class="gold-btn" '+attr+'="savebk">Save backup</button><button class="linkb" '+attr+'="nudgeno" aria-label="Not now">Not now</button></div>';
+}
+function dismissNudge(){ var s=nudgeState(); if(s.newN) s.newN=0; s.snooze=Date.now()+864e5; lsSet('mc-nudge',s); }
+B.nudgeHTML=nudgeHTML; B.dismissNudge=dismissNudge; B.saveBackup=function(){ exportJSON(); };
 
 /* ---------- Home tabs ---------- */
 function setTab(t){
-  B.tab=t; ['b','s','d'].forEach(function(k){ $('pane'+k.toUpperCase()).classList.toggle('on',k===t); });
+  B.tab=t; $('home').classList.toggle('hometab',t==='h'); ['h','b','s','d'].forEach(function(k){ $('pane'+k.toUpperCase()).classList.toggle('on',k===t); });
   [].forEach.call($('tabs').children,function(b){ b.classList.toggle('on',b.dataset.t===t); });
-  if(t==='b') renderHome(); if(t==='d') renderBackup(); if(t==='s'&&window.MC&&MC().renderScans) MC().renderScans();
+  if(t==='h') renderHomeTab(); if(t==='b') renderBinders(); if(t==='d') renderBackup(); if(t==='s'&&window.MC&&MC().renderScans) MC().renderScans();
   var sc=$('homeScroll'); if(sc) sc.scrollTop=0;
 }
 B.tabTo=setTab;
@@ -136,12 +200,11 @@ function totals(list){
   });
   return t;
 }
-function unnamedCount(){ return B.cards.filter(function(c){return !c.player}).length; }
-function renderHome(){
+function unnamedCount(){ return B.cards.filter(function(c){return !c.player||(c.guess&&c.guess.player)}).length; }
+function renderBinders(){
   var h='', n=B.cards.length, un=unnamedCount();
   if(!B.db) h+='<div class="warnb">Heads up: this browser can\'t keep your Binder after you close the page. Export a backup before you leave.</div>';
-  else if(backupDue()) h+='<div class="warnb">You have '+n+' card'+(n===1?'':'s')+' and no recent backup. Clearing your browser data deletes your Binder.<br><button class="ghost-btn" data-act="gobackup" style="width:auto;margin:6px 0 0">Back up now</button></div>';
-  h+='<button class="gold-btn" data-act="scan">Scan cards</button>';
+  h+='<button class="ghost-btn" data-act="scan">Scan more cards</button>';
   if(un) h+='<button class="ghost-btn dbtn" data-act="name">Name your cards<small>'+un+' card'+(un===1?'':'s')+' still need a name. Quick, one at a time.</small></button>';
   var last=B.cards.slice().sort(cmpDate)[0];
   h+='<div class="lab">My Binders</div>';
@@ -158,15 +221,88 @@ function renderHome(){
   else h+='<div class="pvnote">'+PHNOTE+' Everything is stored on this phone only.</div>';
   $('paneB').innerHTML=h;
 }
-B.renderHome=function(){ if(B.tab==='b') renderHome(); };
-$('paneB').addEventListener('click',function(e){
+B.renderHome=function(){ if(B.tab==='h') renderHomeTab(); else if(B.tab==='b') renderBinders(); else if(B.tab==='d') renderBackup(); refreshTabDot(); };
+$('paneB').addEventListener('click',homeAct);
+/* ---------- Home tab (v0.9): the showcase front screen ---------- */
+function mainPhoto(c){ var cl=cleanOf(c,'front'); return urlOf((cl&&cl.blob)||c.front||c.back||c.thumb); }
+function cardName(c){ var p=(c.player&&!(c.guess&&c.guess.player))?c.player:''; return p||('Card '+(c.idx+1)+(c.snum?' · section '+c.snum:'')); }
+function featuredCards(){
+  var named=B.cards.filter(function(c){return c.front||c.back});
+  function score(c){ var s=0; if(c.player&&!(c.guess&&c.guess.player)) s+=2; if(c.label==='keep'||c.label==='grade') s+=2; if(c.auto||c.rookie||c.relic) s+=1; return s; }
+  var feat=named.filter(function(c){return score(c)>=3}).sort(cmpDate).slice(0,4);
+  var seen={}; feat.forEach(function(c){seen[c.id]=1});
+  var rec=named.slice().sort(cmpDate).filter(function(c){return !seen[c.id]}).slice(0,8-feat.length);
+  return feat.concat(rec);
+}
+function topOf(key,n){
+  var m={}; B.cards.forEach(function(c){ var v=c[key]; if(!v||(c.guess&&c.guess[key])) return; m[v]=(m[v]||0)+1; });
+  return Object.keys(m).map(function(k){return {k:k,n:m[k]}}).sort(function(a,b){return b.n-a.n||(a.k<b.k?-1:1)}).slice(0,n);
+}
+function todoList(){
+  var p=prot(), un=unnamedCount(), noClean=B.cards.filter(function(c){return c.front&&!cleanOf(c,'front')}).length, chk=B.cards.filter(function(c){return c.guess&&Object.keys(c.guess).length}).length, out=[];
+  if(p.n&&(p.lvl==='red'||p.lvl==='yellow')) out.push({id:'backup',pri:p.lvl==='red'?0:3,t:p.last?'Back up '+p.unsaved+' card'+(p.unsaved===1?'':'s'):'Back up your binder',d:p.last?'Last saved '+when(p.last)+'.':'Nothing saved yet. One tap, then you\u2019re covered.'});
+  if(un) out.push({id:'name',pri:1,t:'Name '+un+' card'+(un===1?'':'s'),d:'I read each photo and fill in what I\u2019m sure of. You check it.'});
+  if(noClean) out.push({id:'clean',pri:4,t:'Clean up '+noClean+' photo'+(noClean===1?'':'s'),d:'Straighten and even out the lighting. Originals are kept.'});
+  if(!un&&chk) out.push({id:'check',pri:2,t:'Check '+chk+' card'+(chk===1?'':'s')+' marked \u201ccheck this\u201d',d:'Tap the badge on each field once it\u2019s right.'});
+  out.sort(function(a,b){return a.pri-b.pri}); return out;
+}
+function renderHomeTab(){
+  var n=B.cards.length, h='', p=prot();
+  var nudge=nudgeHTML('data-act');
+  h+='<div class="hhead"><span class="crest2">Collectors Desk</span></div>';
+  if(!B.db) h+='<div class="warnb">Heads up: this browser can\u2019t keep your binder after you close the page. Save a backup before you leave.</div>';
+  if(!n){
+    h+='<div class="hero0"><div class="ring"><svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="12" y="6" width="34" height="48" rx="4" transform="rotate(-8 29 30)"/><rect x="20" y="10" width="34" height="48" rx="4"/><path d="M30 34l6 6 10-12" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
+      '<h2>Your cards, beautifully kept.</h2><p>Scan a row of cards with your phone. Collectors Desk finds each one, reads it, and files it in a private binder on this device.</p>'+
+      '<button class="gold-btn bigscan" data-act="scan">Scan your first cards</button>'+
+      '<ol class="how3"><li><b>1</b>Scan<small>Glide along a row</small></li><li><b>2</b>Name<small>Auto-filled, you check</small></li><li><b>3</b>Keep<small>Binder + backup</small></li></ol>'+
+      '<button class="linkb" data-act="restore">Already have a backup? Restore it</button></div>';
+    h+='<div class="pvnote" style="text-align:center">'+esc(HONEST)+'</div>';
+    $('paneH').innerHTML=h; return;
+  }
+  h+=nudge;
+  var fc=featuredCards();
+  h+='<div class="hgrid"><div class="hcol1">';
+  h+='<div class="lab2">Featured &amp; recent</div><div class="car" id="car"><button class="carb l" data-act="carl" aria-label="Previous">\u2039</button><div class="strip" id="carS">';
+  fc.forEach(function(c,i){ var nm=cardName(c), sub=[c.year,c.brand].filter(Boolean).join(' \u00b7 '); var tags=(c.rookie?'<u>RC</u>':'')+(c.auto?'<u>Auto</u>':'')+(c.relic?'<u>Relic</u>':'');
+    h+='<button class="slide" data-act="card" data-id="'+c.id+'"><span class="ph"><img src="'+mainPhoto(c)+'" alt="'+esc(nm)+'" '+(i>2?'loading="lazy"':'')+'></span><span class="cap"><b>'+esc(nm)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span>'+(tags?'<span class="tg">'+tags+'</span>':'')+'</button>'; });
+  h+='</div><button class="carb r" data-act="carr" aria-label="Next">\u203a</button></div>';
+  h+='<button class="gold-btn bigscan" data-act="scan">Scan cards</button>';
+  h+='</div><div class="hcol2">';
+  var td=todoList().filter(function(x){return !(nudge&&x.id==='backup')}), nx=td[0];
+  if(nx){ h+='<div class="nextc"><small>Next step</small><div class="nt">'+esc(nx.t)+'</div><p>'+esc(nx.d)+'</p><button class="ghost-btn" data-act="todo" data-id="'+nx.id+'">Start \u203a</button></div>';
+    var rest=td.slice(1); if(rest.length) h+='<div class="chips2">'+rest.map(function(x){return '<button class="chip" data-act="todo" data-id="'+x.id+'">'+esc(x.t)+'</button>'}).join('')+'</div>'; }
+  else h+='<div class="nextc"><small>Next step</small><div class="nt">You\u2019re all caught up</div><p>Scan more cards whenever you\u2019re ready.</p></div>';
+  var ta=totals(B.cards), tt=topOf('team',3), tp=topOf('player',3);
+  h+='<div class="lab2">Your collection at a glance</div><div class="glance"><div class="gt"><b>'+n+'</b><small>card'+(n===1?'':'s')+'</small></div><div class="gt"><b>'+(B.binders.length+1)+'</b><small>binder'+(B.binders.length?'s':'')+'</small></div>'+(ta.hasPv?'<div class="gt"><b>'+money(ta.pv)+'</b><small>Placeholder, info only</small></div>':'')+'</div>';
+  if(tt.length||tp.length){ h+='<div class="tops">'; if(tt.length) h+='<div><small>Top teams</small>'+tt.map(function(x){return '<span>'+esc(x.k)+' <i>'+x.n+'</i></span>'}).join('')+'</div>'; if(tp.length) h+='<div><small>Top players</small>'+tp.map(function(x){return '<span>'+esc(x.k)+' <i>'+x.n+'</i></span>'}).join('')+'</div>'; h+='</div>'; }
+  else h+='<div class="pvnote">Name a few cards and your top teams and players show up here.</div>';
+  var ls=B.cards.slice().sort(cmpDate)[0], le=B.cards.filter(function(c){return c.upd}).sort(function(a,b){return b.upd-a.upd})[0];
+  var sc=ls?B.cards.filter(function(c){return c.sid===ls.sid}).length:0;
+  h+='<div class="lab2">Recent activity</div><ul class="act"><li><span>Last scan</span><b>'+(ls?esc(when(ls.ts))+' \u00b7 '+sc+' card'+(sc===1?'':'s'):'None yet')+'</b></li><li><span>Last backup</span><b>'+esc(when(p.last))+'</b></li><li><span>Last edit</span><b>'+(le?esc(cardName(le))+' \u00b7 '+esc(when(le.upd)):'None yet')+'</b></li></ul>';
+  h+=protectHTML('data-act',false);
+  h+='</div></div>';
+  h+='<div class="pvnote" style="text-align:center">'+PHNOTE+'</div>';
+  $('paneH').innerHTML=h;
+}
+function carStep(d){ var s=$('carS'); if(!s) return; var w=(s.querySelector('.slide')||{offsetWidth:240}).offsetWidth+14; s.scrollBy({left:d*w,behavior:'smooth'}); }
+function homeAct(e){
   var b=e.target.closest('[data-act]'); if(!b) return; var a=b.dataset.act;
   if(a==='scan') MC().startScan();
   else if(a==='open') B.openBinder(b.dataset.id);
   else if(a==='name') B.openName({});
   else if(a==='newb') newBinderDlg();
   else if(a==='gobackup') setTab('d');
-});
+  else if(a==='card'){ var ids=featuredCards().map(function(c){return c.id}); B.openCard(b.dataset.id,ids); }
+  else if(a==='carl') carStep(-1); else if(a==='carr') carStep(1);
+  else if(a==='savebk') exportJSON();
+  else if(a==='nudgeno'){ dismissNudge(); renderHomeTab(); }
+  else if(a==='restore'){ setTab('d'); setTimeout(function(){ var f=$('impFile'); if(f) f.click(); },50); }
+  else if(a==='todo'){ var id=b.dataset.id;
+    if(id==='backup') exportJSON(); else if(id==='name') B.openName({}); else if(id==='clean'){ B.openBinder('all'); MC().toast('Tap “Clean up photos” near the top.',3200); } else if(id==='check'){ var c=B.cards.filter(function(c){return c.guess&&Object.keys(c.guess).length})[0]; if(c) B.openCard(c.id,B.cards.filter(function(c){return c.guess&&Object.keys(c.guess).length}).map(function(c){return c.id})); } }
+}
+$('paneH').addEventListener('click',homeAct);
+
 $('tabs').addEventListener('click',function(e){ var b=e.target.closest('button'); if(b) setTab(b.dataset.t); });
 
 /* ---------- small prompt ---------- */
@@ -266,7 +402,7 @@ $('bvSel').addEventListener('click',function(){ B.selMode=!B.selMode; B.sel={}; 
 $('bvSort').addEventListener('change',function(){ lsSet('mc-sort',$('bvSort').value); renderBV(); });
 $('bvSearch').addEventListener('input',function(){ renderBV(); });
 $('bvBack').addEventListener('click',function(){ B.goHome(); });
-B.goHome=function(){ flush(); B.selMode=false; MC().show('home'); setTab('b'); };
+B.goHome=function(){ flush(); B.selMode=false; MC().show('home'); setTab('h'); };
 $('bvAdd').addEventListener('click',function(){ var id=B.view.id; B.openBinder('all',{pick:id}); });
 $('bvMenu').addEventListener('click',function(){
   var bd=binderById(B.view.id); if(!bd) return;
@@ -525,32 +661,87 @@ function afterRestore(id,at){
   else if(onBv) renderBV(); else renderHome();
 }
 
-/* ---------- Name your cards ---------- */
-var N={ids:[],i:0,side:'front',named:0,sid:null};
+/* ---------- Name your cards (v0.9: the app reads each photo on this device and pre-fills what it is sure of) ---------- */
+var N={ids:[],i:0,side:'front',named:0,sid:null,rd:null};
+function needsName(c){ return !c.player||!!(c.guess&&c.guess.player); }
 B.openName=function(opts){
   opts=opts||{}; flush();
-  var list=B.cards.filter(function(c){return !c.player&&(!opts.sid||c.sid===opts.sid)});
+  var list=B.cards.filter(function(c){return needsName(c)&&(!opts.sid||c.sid===opts.sid)});
   list.sort(function(a,b){return (a.snum-b.snum)||(a.idx-b.idx)||cmpDate(a,b)});
   if(!list.length){ MC().toast('Every card already has a name.'); B.goHome(); return; }
-  N={ids:list.map(function(c){return c.id}),i:0,side:'front',named:0,sid:opts.sid||null};
-  MC().show('nm'); renderNM(true);
+  if(N.rd) N.rd.stop=true;
+  N={ids:list.map(function(c){return c.id}),i:0,side:'front',named:0,sid:opts.sid||null,rd:null};
+  MC().show('nm'); renderNM(true); startReading();
 };
+/* reader queue: one card at a time in the page, the heavy work runs in the reader's own worker, so taps stay smooth */
+function startReading(){
+  var rd=N.rd={stop:false,done:0,fail:null,cur:null,pending:0};
+  var todo=N.ids.filter(function(id){ var c=byId(id); return c&&!c.ocrTs&&!c.edited; });
+  rd.total=todo.length; rd.pending=todo.length;
+  if(!todo.length){ updateRd(); return; }
+  updateRd(); if(!window.CardOCR||!window.CardParse){ rd.fail='The reader files are missing'; updateRd(); return; }
+  (async function loop(){
+    try{ await CardOCR.init(function(m){ rd.msg=m; updateRd(); }); }catch(e){ rd.fail=(e&&e.message)||'The reader did not start'; log('reader init failed: '+rd.fail); updateRd(); return; }
+    rd.msg='';
+    while(!rd.stop){
+      var id=null, k; for(k=0;k<N.ids.length;k++){ var j=(N.i+k)%N.ids.length, cc=byId(N.ids[j]); if(cc&&!cc.ocrTs&&!cc.ocrFail&&!cc.edited&&todo.indexOf(cc.id)>=0&&!rd['x'+cc.id]){ id=cc.id; break; } }
+      if(!id) break;
+      var c=byId(id); rd.cur=id; updateRd();
+      try{
+        var r=await CardOCR.readWords(c.front||c.back,{shouldStop:function(){return rd.stop}});
+        if(rd.stop) break;
+        var p=CardParse.parse(r.words,c.sport||'Baseball'); applyRead(c,p,r.ms);
+      }catch(e){ log('read fail '+id+': '+(e&&e.message||e)); c.ocrFail=true; rd['x'+id]=1; }
+      rd['x'+id]=1; rd.done++; rd.pending=Math.max(0,rd.pending-1); rd.cur=null; updateRd();
+      await sleep(30);
+    }
+    rd.cur=null; updateRd();
+  })();
+}
+function applyRead(c,p,ms){
+  c.guess=c.guess||{}; var any=0, F=p.fields;
+  ['player','team','year','brand','number','serial','parallel'].forEach(function(k){ if(F[k]!=null&&F[k]!==''&&(c[k]===''||c[k]==null)){ c[k]=(k==='year'?+F[k]:F[k]); c.guess[k]=1; any++; } });
+  var fl=0; ['rookie','auto','relic'].forEach(function(f){ if(p.flags[f]&&!c[f]){ c[f]=true; fl++; } }); if(fl){ c.guess.flags=1; any++; }
+  c.ocrLow=p.low||{}; c.ocrTs=Date.now(); c.ocrN=any; c.upd=Date.now(); saveCard(c); log('read '+c.id+': '+any+' fields in '+ms+' ms');
+  if(N.ids[N.i]===c.id){ renderNMForm(c); renderNMHints(c); }
+}
+function updateRd(){
+  var rd=N.rd, el=$('nmRd'); if(!el||!rd) return; var c=byId(N.ids[N.i]), t=N.ids.length;
+  var read=N.ids.filter(function(id){var x=byId(id); return x&&x.ocrTs}).length;
+  var h='';
+  if(rd.fail) h='<b>The auto-reader could not start on this device.</b> Nothing is wrong with your cards. Type each name and use Next.';
+  else if(rd.msg) h='<b>'+esc(rd.msg)+'</b>';
+  else if(rd.pending>0||rd.cur){ h='<b>Reading your cards on this device…</b> '+read+' of '+t+' done'+(c&&!c.ocrTs&&!c.edited&&!c.ocrFail?' · this one is next':''); }
+  else if(read){ h='<b>Auto-read finished.</b> Everything it filled says “check this”.'; }
+  else h='';
+  el.className=(rd.pending>0||rd.cur||rd.msg)&&!rd.fail?'busy':''; el.innerHTML=h+((rd.pending>0||rd.cur)&&!rd.fail?'<i><u style="width:'+Math.round(100*read/Math.max(1,t))+'%"></u></i>':'');
+  el.style.display=h?'block':'none';
+  var st=$('nmCardSt'); if(st&&c){ var s=''; if(c.ocrTs) s=c.ocrN?('✨ Read from the photo: '+c.ocrN+' field'+(c.ocrN===1?'':'s')+' filled. Please check them.'):'I could not read anything sure on this card. That is normal. Type what you see.'; else if(c.ocrFail) s='I could not read this one. Type what you see.'; else if(c.edited&&!c.ocrTs) s=''; else if(!rd.fail&&(rd.cur===c.id)) s='Reading this card…'; else if(!rd.fail&&rd.pending>0) s='Waiting in line to be read…'; st.textContent=s; }
+}
+function renderNMHints(c){
+  var box=$('nmHints'); if(!box) return; var L=c.ocrLow||{}, h='';
+  var lab={player:'Player',team:'Team',year:'Year',brand:'Set',serial:'Serial',parallel:'Parallel',surname:'Last name'};
+  Object.keys(L).forEach(function(k){ var tgt=k==='surname'?'player':k; if(c[tgt]&&k!=='surname'&&!c.guess[tgt]) return; var vals=L[k].filter(function(x){return String(x.v)!==String(c[tgt])}); if(!vals.length) return;
+    h+='<div class="hint2"><span>'+lab[k]+', not sure:</span>'+vals.slice(0,3).map(function(x){return '<button type="button" class="chip" data-hk="'+k+'" data-v="'+esc(x.v)+'">'+esc(x.v)+'</button>'}).join('')+'</div>'; });
+  box.innerHTML=h?('<div class="hintbox"><small>Low confidence, so I left these blank. Tap one only if it is right.</small>'+h+'</div>'):'';
+}
+$('nmHints').addEventListener('click',function(e){ var b=e.target.closest('[data-hk]'); if(!b) return; var c=byId(N.ids[N.i]); if(!c) return; var k=b.dataset.hk, tgt=k==='surname'?'player':k, v=b.dataset.v; setGuess(c,tgt,tgt==='year'?+v:v); if(k==='surname'){ var inp=$('nmForm').querySelector('[data-k="player"]'); renderNMForm(c); inp=$('nmForm').querySelector('[data-k="player"]'); if(inp){ inp.focus(); try{ inp.setSelectionRange(0,0); }catch(x){} } } else renderNMForm(c); renderNMHints(c); });
 function renderNM(first){
   var c=byId(N.ids[N.i]); if(!c){ finishNM(); return; }
   $('nmN').textContent='Card '+(N.i+1)+' of '+N.ids.length;
   $('nmProg').firstChild.style.width=Math.round(100*N.i/N.ids.length)+'%';
   N.side='front'; drawNMPhoto(c);
-  // prefill from the last card you typed (year, set, parallel, raw/graded). Team is a one-tap suggestion.
+  // prefill from the last card you typed (year, set, parallel, raw/graded) only when the reader found nothing for that field. Marked “check this”.
   var pre=false;
-  if(!c.edited){ c.guess=c.guess||{}; if(LAST.sport) c.sport=LAST.sport; if(c.year===''&&LAST.year){c.year=LAST.year;c.guess.year=1;pre=true} if(!c.brand&&LAST.brand){c.brand=LAST.brand;c.guess.brand=1;pre=true} if(!c.parallel&&LAST.parallel){c.parallel=LAST.parallel;c.guess.parallel=1;pre=true} if(LAST.cond){c.cond=LAST.cond; if(LAST.cond==='graded'&&!c.grader&&LAST.grader) c.grader=LAST.grader;} }
-  renderNMForm(c,true);
+  if(!c.edited&&!c.ocrTs&&(c.ocrFail||!(N.rd&&N.rd.pending>0&&!N.rd.fail))){ c.guess=c.guess||{}; if(LAST.sport) c.sport=LAST.sport; if(c.year===''&&LAST.year){c.year=LAST.year;c.guess.year=1;pre=true} if(!c.brand&&LAST.brand){c.brand=LAST.brand;c.guess.brand=1;pre=true} if(!c.parallel&&LAST.parallel){c.parallel=LAST.parallel;c.guess.parallel=1;pre=true} if(LAST.cond){c.cond=LAST.cond; if(LAST.cond==='graded'&&!c.grader&&LAST.grader) c.grader=LAST.grader;} }
+  renderNMForm(c,true); renderNMHints(c);
   $('nmPre').textContent=pre?'Year, set and parallel are copied from your last card and marked “check this”. Tap the badge when they are right, or just change them.':'';
   $('nmTeamLast').innerHTML=(LAST.team&&!c.team)?'<div class="sug"><button type="button" data-lt="1">Same team as last: '+esc(LAST.team)+'</button></div>':'';
-  $('nmOcrOut').innerHTML='';
   $('nmPrev').disabled=N.i<=0; $('nmNext').textContent=N.i>=N.ids.length-1?'Save and finish':'Next ›';
+  updateRd();
   if(!first) $('nmBody').scrollTop=0;
 }
-function renderNMForm(c,first){ var y=$('nmBody').scrollTop; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','parallel','cond'],function(){}); if(!first) $('nmBody').scrollTop=y; }
+function renderNMForm(c,first){ var y=$('nmBody').scrollTop, ae=document.activeElement, ak=ae&&ae.dataset&&ae.dataset.k&&$('nmForm').contains(ae)?ae.dataset.k:null, av=ak?ae.value:null; buildForm($('nmForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond'],function(){}); if(ak&&!first){ var ni=$('nmForm').querySelector('[data-k="'+ak+'"]'); if(ni){ ni.value=av; } } if(!first) $('nmBody').scrollTop=y; }
 function drawNMPhoto(c){
   var blob=N.side==='front'?(c.front||c.back):(c.back||c.front);
   $('nmImg').src=urlOf(blob); $('nmFl').textContent=(N.side==='front'?'Front':'Back')+((c.back&&c.front)?' · tap to flip':'');
@@ -559,81 +750,33 @@ $('nmImg').addEventListener('click',function(){ var c=byId(N.ids[N.i]); if(!c||!
 $('nmTeamLast').addEventListener('click',function(e){ if(!e.target.closest('[data-lt]')) return; var c=byId(N.ids[N.i]); setField(c,'team',LAST.team); var i=$('nmForm').querySelector('[data-k="team"]'); if(i) i.value=LAST.team; $('nmTeamLast').innerHTML=''; });
 function nmStep(d,saved){
   var c=byId(N.ids[N.i]);
-  if(c&&saved){ if(c.player) { if(!c.named) {} N.named++; } c.edited=true; saveCard(c); }
+  if(c&&saved){ if(c.player) N.named++; c.edited=true; c.upd=Date.now(); saveCard(c); }
   flush(); var j=N.i+d; if(j<0) return; if(j>=N.ids.length){ finishNM(); return; } N.i=j; renderNM();
 }
 $('nmNext').addEventListener('click',function(){ nmStep(1,true); });
 $('nmPrev').addEventListener('click',function(){ nmStep(-1,false); });
 $('nmSkip').addEventListener('click',function(){
-  var c=byId(N.ids[N.i]); if(c&&!c.player){ /* skipping keeps any year/set copied in only if you typed a name; otherwise undo the copy */ if(!c.named&&c.edited===false){ c.year='';c.brand='';c.parallel='';c.guess={}; } }
+  var c=byId(N.ids[N.i]); if(c&&!c.player){ if(!c.named&&c.edited===false&&!c.ocrTs){ c.year='';c.brand='';c.parallel='';c.guess={}; } }
   nmStep(1,false);
 });
-$('nmBack').addEventListener('click',function(){ flush(); B.goHome(); });
+function nmStopRead(){ if(N.rd) N.rd.stop=true; }
+$('nmBack').addEventListener('click',function(){ nmStopRead(); flush(); B.goHome(); });
 function finishNM(){
-  flush(); var left=unnamedCount();
-  MC().toast(N.named?('Saved '+N.named+' name'+(N.named===1?'':'s')+'. Nice work.'):'No names saved this time.',3000);
+  nmStopRead(); flush(); var left=B.cards.filter(needsName).length, chk=B.cards.filter(function(c){return guessCount(c)>0}).length;
+  MC().toast(N.named?('Saved '+N.named+' name'+(N.named===1?'':'s')+'. Nice work.'):'Done for now.',3000);
   B.openBinder('all');
   if(left) setTimeout(function(){ MC().toast(left+' card'+(left===1?'':'s')+' still need a name. You can do it any time.',3200); },3200);
 }
-/* optional on-device reading of names (tesseract.js from a CDN; photos never leave the phone) */
-var TESS={state:'idle',w:null};
-function loadTess(){
-  return new Promise(function(res,rej){
-    if(window.Tesseract) return res(window.Tesseract);
-    var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.onload=function(){res(window.Tesseract)}; s.onerror=function(){rej(new Error('could not load the reader'))};
-    document.head.appendChild(s); setTimeout(function(){ if(!window.Tesseract) rej(new Error('timed out loading the reader')); },25000);
-  });
-}
-var STOP=/^(topps|panini|bowman|chrome|series|rookie|card|baseball|donruss|prizm|topps|fleer|upper|deck|heritage|stadium|club|update|photo|variation|refractor|auto|autograph|mlb|major|league|all-star|allstar|national|american|inc|licensed|products|player|the|and|of|new|york|los|angeles|san|francisco|diego|st|louis|tampa|bay|kansas|city|white|red|blue|sox|jays|psa|bgs|sgc|gem|mint|rc|first|official)$/i;
-var BRANDS=['Topps Chrome','Bowman Chrome','Topps Heritage','Topps Update','Topps Series 1','Topps Series 2','Topps','Bowman','Donruss Optic','Donruss','Panini Prizm','Prizm','Optic','Mosaic','Select','Contenders','Score','Upper Deck','Fleer','Leaf','Stadium Club'];
-function parseOCR(text,sport){
-  var lines=text.split(/\n+/).map(function(l){return l.replace(/[^A-Za-z0-9.'\-\s\/©#]/g,' ').replace(/\s+/g,' ').trim()}).filter(Boolean), out={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[]}, yr=new Date().getFullYear()+1, tf=teamsFor(sport);
-  lines.forEach(function(l){
-    var m=l.match(/\b(19[4-9]\d|20[0-4]\d)\b/g); if(m) m.forEach(function(y){ y=+y; if(y>=1948&&y<=yr&&out.years.indexOf(y)<0) out.years.push(y); });
-    var lo=l.toLowerCase(); Object.keys(NICK).forEach(function(n){ if(new RegExp('\\b'+n.replace(/[-]/g,'\\-')+'\\b').test(lo)){ NICK[n].forEach(function(t){ if(tf.indexOf(t)>=0&&out.teams.indexOf(t)<0) out.teams.push(t); }); } });
-    var words=l.split(' ');
-    if(words.length>=2&&words.length<=3&&words.every(function(w){return /^[A-Za-z][A-Za-z.'\-]{2,}$/.test(w)&&/[aeiouyAEIOUY]/.test(w)&&!STOP.test(w)})&&l.length>=6&&l.length<=26){
-      var nm=words.map(function(w){return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()}).join(' ');
-      if(out.players.indexOf(nm)<0) out.players.push(nm);
-    }
-  });
-  var all=lines.join('\n'), mm, re;
-  re=/\b(\d{1,4})\s*\/\s*(\d{1,4})\b/g; while((mm=re.exec(all))){ var a1=+mm[1], b1=+mm[2]; if(b1>=2&&a1>=1&&a1<=b1&&a1<1900){ var sr=a1+'/'+b1; if(out.serials.indexOf(sr)<0) out.serials.push(sr); } }
-  re=/(?:^|\s)(?:no\.?|#)\s*(\d{1,4}[A-Z]?)\b/gi; while((mm=re.exec(all))){ if(out.numbers.indexOf(mm[1].toUpperCase())<0) out.numbers.push(mm[1].toUpperCase()); }
-  BRANDS.forEach(function(b){ if(new RegExp('\\b'+b+'\\b','i').test(all)&&!out.brands.some(function(x){return x.indexOf(b)>=0})) out.brands.push(b); });
-  if(/\bRC\b|\brookie\b/i.test(all)) out.flags.push('rookie'); if(/\bauto(graph(ed)?)?\b/i.test(all)) out.flags.push('auto'); if(/\b(relic|patch|jersey|memorabilia)\b/i.test(all)) out.flags.push('relic');
-  var g=all.match(/\b(PSA|BGS|SGC|CGC|BECKETT)\b/i); if(g){ var gg=g[1].toUpperCase(); out.graders.push(gg==='BECKETT'?'BGS':gg); }
-  re=/\b(?:GEM\s*M(?:T|INT)|MINT|NM-?MT|NM|EX-?MT|EX|VG)\s*\+?\s*(10|\d(?:\.5)?)\b/gi; while((mm=re.exec(all))){ if(out.grades.indexOf(mm[1])<0) out.grades.push(mm[1]); }
-  re=/\b\d{7,9}\b/g; while((mm=re.exec(all))){ if(out.certs.indexOf(mm[0])<0) out.certs.push(mm[0]); }
-  ['players','years','teams'].forEach(function(k){ out[k]=out[k].slice(0,k==='teams'?2:3); }); ['serials','numbers','brands','grades','certs'].forEach(function(k){ out[k]=out[k].slice(0,2); });
-  return out;
-}
+/* Reader for the listing sheet: same bundled reader, result turned into the "might be" lists that sheet shows */
 async function ocrCard(c,outId){
-  var T=await loadTess();
-  if(!TESS.w){ $(outId||'nmOcrOut').innerHTML='<small>Getting the on-device reader ready the first time (a few MB, then it stays in your browser)…</small>'; TESS.w=await T.createWorker('eng'); }
-  var blob=c.front||c.back, im=await new Promise(function(r,j){ var i=new Image(); i.onload=function(){r(i)}; i.onerror=j; i.src=urlOf(blob); });
-  var s=Math.min(1,1100/im.naturalWidth), cv=document.createElement('canvas'); cv.width=Math.round(im.naturalWidth*s); cv.height=Math.round(im.naturalHeight*s); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
-  var r=await Promise.race([TESS.w.recognize(cv),new Promise(function(_,rej){setTimeout(function(){rej(new Error('took too long'))},60000)})]);
-  var txt=r.data.text||'';
-  if(r.data.lines&&r.data.lines.length) txt=r.data.lines.filter(function(l){return l.confidence>=70}).map(function(l){return l.text}).join('\n');
-  return parseOCR(txt,c.sport);
+  if(!window.CardOCR||!window.CardParse) throw new Error('the reader files are missing');
+  var out=$(outId||'lsOcr'); if(out&&!CardOCR.state.ready) out.innerHTML='<small>Getting the reader ready (about 7 MB, once)…</small>';
+  var r=await CardOCR.readWords(c.front||c.back,{}), p=CardParse.parse(r.words,c.sport||'Baseball'), o={players:[],years:[],teams:[],serials:[],numbers:[],brands:[],flags:[],graders:[],grades:[],certs:[]};
+  function add(a,k){ if(p.fields[k]!=null&&p.fields[k]!=='') a.push(p.fields[k]); (p.low[k]||[]).forEach(function(x){ if(a.indexOf(x.v)<0) a.push(x.v); }); }
+  add(o.players,'player'); (p.low.surname||[]).forEach(function(x){ o.players.push(x.v); }); add(o.years,'year'); add(o.teams,'team'); add(o.serials,'serial'); add(o.numbers,'number'); add(o.brands,'brand');
+  ['rookie','auto','relic'].forEach(function(f){ if(p.flags[f]) o.flags.push(f); });
+  return o;
 }
-$('nmOcr').addEventListener('click',async function(){
-  var c=byId(N.ids[N.i]); if(!c) return; var out=$('nmOcrOut'), btn=$('nmOcr'); btn.disabled=true;
-  out.innerHTML='<small>Reading this card on your phone… your photo is not uploaded.</small>';
-  try{
-    var o=await ocrCard(c), h='', any=false;
-    function grp(lbl,key,arr){ if(!arr.length) return; any=true; h+='<div>'+lbl+'<div class="sg">'+arr.map(function(x){return '<button type="button" data-oc="'+key+'" data-v="'+esc(x)+'" class="chip">'+esc(x)+'</button>'}).join('')+'</div></div>'; }
-    grp('Player might be:','player',o.players); grp('Year might be:','year',o.years); grp('Team might be:','team',o.teams);
-    out.innerHTML=(any?'<b>Suggestions only. Please check them.</b> Tap one to use it.'+h:'I couldn\'t read a name or year on this one. That is normal for some cards. Please type it.')+'<br><small>Auto-read is a helper, not a guarantee. It is often wrong on fancy fonts and shiny cards.</small>';
-    log('ocr ok: '+JSON.stringify(o));
-  }catch(e){ out.innerHTML='Auto-read didn\'t work here ('+esc(e&&e.message||'unknown')+'). It needs an internet connection the first time. You can just type the names.'; log('ocr fail: '+(e&&e.message||e)); }
-  btn.disabled=false;
-});
-$('nmOcrOut').addEventListener('click',function(e){
-  var b=e.target.closest('[data-oc]'); if(!b) return; var c=byId(N.ids[N.i]), k=b.dataset.oc; setGuess(c,k,b.dataset.v);
-  renderNMForm(c);
-});
 
 /* ---------- Clean up all photos (binder view) ---------- */
 function cleanTodo(list){ var t=[]; list.forEach(function(c){ ['front','back'].forEach(function(sd){ if(c[sd]&&!cleanOf(c,sd)) t.push({c:c,s:sd}); }); }); return t; }
@@ -717,51 +860,63 @@ $('lsAct').addEventListener('click',function(e){
 });
 function legacyCopy(t){ try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); return ok; }catch(e){ return false; } }
 
-/* ---------- Backup tab: export / import / storage ---------- */
+/* ---------- Backup tab: protect, export / restore, storage ---------- */
 async function renderBackup(){
-  var st=await persistStatus(), usage='';
-  try{ if(navigator.storage&&navigator.storage.estimate){ var e=await navigator.storage.estimate(); usage=' · using about '+((e.usage||0)/1048576).toFixed(0)+' MB'; } }catch(e){}
-  var le=lsGet('mc-lastexport',0), n=B.cards.length;
-  var h='<div class="warnb"><b>Your Binder lives only on this phone.</b> If you clear your browser data or site data, it is deleted. Back it up now and then.</div>';
-  h+='<div class="kv"><b>'+n+'</b> card'+(n===1?'':'s')+' · <b>'+B.binders.length+'</b> custom binder'+(B.binders.length===1?'':'s')+'<br>Last backup: <b>'+(le?new Date(le).toLocaleDateString():'never')+'</b></div>';
-  h+='<button class="gold-btn dbtn" data-d="json">Export my Binder (JSON)<small>Full backup with photos. Use this to restore.</small></button>';
+  var usage='';
+  try{ if(navigator.storage&&navigator.storage.estimate){ var e=await navigator.storage.estimate(); usage=' \u00b7 using about '+((e.usage||0)/1048576).toFixed(0)+' MB'; } }catch(e){}
+  if(B.persist==='unknown'||B.persist==='unsupported') B.persist=await persistStatus();
+  var n=B.cards.length;
+  var h=protectHTML('data-d',true);
+  h+='<div class="kv">'+n+' card'+(n===1?'':'s')+' \u00b7 '+B.binders.length+' custom binder'+(B.binders.length===1?'':'s')+usage+(B.db?'':'<br><b>This browser can\u2019t keep a binder after you close the page.</b>')+'</div>';
+  if(B.persist==='off') h+='<button class="ghost-btn dbtn" data-d="persist">Ask the browser to keep my binder safe<small>Optional. Some browsers say no. A backup still covers you.</small></button>';
+  h+='<div class="lab">Restore</div>';
+  h+='<button class="ghost-btn dbtn" data-d="import">Restore from backup<small>Pick a backup file. I show what\u2019s inside first. Nothing you have is overwritten.</small></button>';
+  if(B.lastRestore&&B.lastRestore.ids.length) h+='<button class="ghost-btn dbtn" data-d="undo">Undo last restore<small>Removes the '+B.lastRestore.ids.length+' card'+(B.lastRestore.ids.length===1?'':'s')+' that restore added</small></button>';
+  h+='<input type="file" id="impFile" accept=".json,application/json" style="display:none">';
+  h+='<div class="lab">Other exports (these are not backups)</div>';
   h+='<button class="ghost-btn dbtn" data-d="csv">Export a spreadsheet (CSV)<small>No photos. Opens in Excel or Sheets. Everything about each card.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
-  h+='<button class="ghost-btn dbtn" data-d="import">Import a backup (JSON)<small>Adds cards that are missing. Nothing is overwritten.</small></button>';
-  h+='<input type="file" id="impFile" accept=".json,application/json" style="display:none">';
-  h+='<div class="lab">Storage protection</div><div class="kv">Protected storage: <b>'+(st==='on'?'On ✓ (the browser will not clear it on its own)':st==='off'?'Off (the browser may clear it if the phone runs low on space)':'Not supported here')+'</b>'+usage+(B.db?'':'<br><b>This browser can\'t keep a Binder after you close the page.</b>')+'</div>';
-  if(st==='off') h+='<button class="ghost-btn dbtn" data-d="persist">Ask the browser to protect my Binder</button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div style="text-align:center;color:#6f664f;font-size:12px;margin:8px 0">Guided Scan v0.8 · Moose Cards</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.9 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
+  refreshTabDot();
 }
+function refreshTabDot(){ var db=$('tabs').querySelector('[data-t="d"]'); if(db){ var p=prot(); db.classList.toggle('alert',p.lvl==='red'&&p.n>0); } }
 $('paneD').addEventListener('click',function(e){
   var b=e.target.closest('[data-d]'); if(!b) return; var a=b.dataset.d;
-  if(a==='json') exportJSON(); else if(a==='csv') exportCSV(); else if(a==='lcsv') exportListingCSV(B.cards.slice().sort(cmpDate)); else if(a==='zip') exportZip();
+  if(a==='savebk') exportJSON(); else if(a==='csv') exportCSV(); else if(a==='lcsv') exportListingCSV(B.cards.slice().sort(cmpDate)); else if(a==='zip') exportZip();
   else if(a==='import') $('impFile').click();
-  else if(a==='persist'){ try{ navigator.storage.persist().then(function(ok){ MC().toast(ok?'Protected ✓':'The browser said not now. Keep making backups.',3200,!ok); renderBackup(); }); }catch(x){} }
+  else if(a==='undo') undoRestore();
+  else if(a==='persist') askPersist(true);
   else if(a==='info') MC().openInfo();
 });
 function stamp(){ var d=new Date(); function p(n){return ('0'+n).slice(-2)} return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
 function mbs(b){ return b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(1)+' MB'; }
-function deliver(blob,name,markBackup){
+/* bk = {start:ms, n:cards} when this file is a backup: only counted as backed up once the share finishes or the download is tapped */
+function deliver(blob,name,bk){
   var f=null; try{ f=new File([blob],name,{type:blob.type}); }catch(e){}
   var u=URL.createObjectURL(blob); setTimeout(function(){URL.revokeObjectURL(u)},900000);
   var cs=false; try{ cs=!!(f&&navigator.canShare&&navigator.canShare({files:[f]})); }catch(e){}
+  function done(how){ if(!bk) return; lsSet('mc-lastexport',bk.start); var s=nudgeState(); s.newN=0; lsSet('mc-nudge',s); MC().toast(how==='share'?'Backup saved \u2713 '+bk.n+' card'+(bk.n===1?'':'s')+' protected.':'Backup downloaded \u2713 Keep the file somewhere safe.',3800); MC().closeDlg(); afterBackupChange(); }
   var btns=[];
-  if(cs) btns.push({label:'Share / save…',cls:'gold',keep:true,fn:function(){ navigator.share({files:[f],title:name}).then(function(){ if(markBackup) lsSet('mc-lastexport',Date.now()); MC().toast('Saved ✓'); renderBackup(); }).catch(function(){}); return true; }});
-  btns.push({label:'Download '+name+' ('+mbs(blob.size)+')',cls:cs?'ghost':'gold',href:u,download:name,fn:function(){ if(markBackup) lsSet('mc-lastexport',Date.now()); setTimeout(renderBackup,500); return true; }});
-  btns.push({label:'Close',cls:'ghost'});
-  MC().askDlg('Your file is ready','Keep it somewhere safe, like your Files app, Drive or email to yourself.',btns);
+  if(cs) btns.push({label:bk?'Save backup\u2026':'Share / save\u2026',cls:'gold',keep:true,fn:function(){ navigator.share({files:[f],title:name}).then(function(){ done('share'); }).catch(function(er){ if(bk) MC().toast('Not saved. Your backup isn\u2019t counted until you save it.',3600,true); }); return true; }});
+  btns.push({label:(cs?'Or download ':'Download ')+name+' ('+mbs(blob.size)+')',cls:cs?'ghost':'gold',href:u,download:name,fn:function(){ setTimeout(function(){ done('dl'); },400); return true; }});
+  btns.push({label:bk?'Not now':'Close',cls:'ghost'});
+  MC().askDlg(bk?'Your backup is ready':'Your file is ready',bk?('File: '+name+'. '+WHATS_IN+' It counts as backed up once you save it to Files, Drive or email.'):'Keep it somewhere safe, like your Files app, Drive or email to yourself.',btns);
 }
+function afterBackupChange(){ if(B.tab==='h') renderHomeTab(); else if(B.tab==='d') renderBackup(); else if(B.tab==='b') renderBinders(); refreshTabDot(); if(window.MC&&MC().refreshRevNudge) MC().refreshRevNudge(); }
+B.afterBackupChange=afterBackupChange;
 function b2d(b){ return b?new Promise(function(res){ var fr=new FileReader(); fr.onload=function(){res(fr.result)}; fr.onerror=function(){res(null)}; fr.readAsDataURL(b); }):Promise.resolve(null); }
 async function exportJSON(){
-  if(!B.cards.length&&!B.binders.length){ MC().toast('Nothing to export yet. Scan a card first, then come back here.',3200); return; }
-  MC().toast('Packing your Binder…',2500);
+  if(B.exporting) return;
+  if(!B.cards.length&&!B.binders.length){ MC().toast('Nothing to back up yet. Scan a card first, then come back here.',3200); return; }
+  B.exporting=true; var start=Date.now(), cnt=B.cards.length;
+  MC().toast('Packing your backup\u2026',2500);
+  try{
   flush();
-  var parts=['{"app":"moose-cards-binder","version":"0.8","exported":'+JSON.stringify(new Date().toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.9","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
@@ -770,7 +925,8 @@ async function exportJSON(){
     parts.push((i?',':'')+JSON.stringify(o)); if(i%5===4) await sleep(0);
   }
   parts.push(']}');
-  deliver(new Blob(parts,{type:'application/json'}),'moose-cards-binder-'+stamp()+'.json',true);
+  deliver(new Blob(parts,{type:'application/json'}),'collectors-desk-backup-'+localDate(start)+'.json',{start:start,n:cnt});
+  }finally{ B.exporting=false; }
 }
 function localDate(t){ var d=new Date(t); function p(n){return ('0'+n).slice(-2)} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function csvEsc(v){ v=v==null?'':String(v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
@@ -798,7 +954,7 @@ function exportListingCSV(list){
   if(!list.length){ MC().toast('Nothing to export yet. Scan a card first, then come back here.',3200); return; }
   flush(); var bases=fileBases(), rows=[Listing.HEADERS.map(csvEsc).join(',')];
   list.forEach(function(c){ var pn=photoNames(c,bases[c.id]); rows.push(Listing.row(c,{orig:pn.orig,cleaned:pn.cleaned}).map(csvEsc).join(',')); });
-  deliver(new Blob(['\ufeff'+rows.join('\r\n')],{type:'text/csv'}),'moose-cards-listing-DRAFT-'+(list.length===1?'1-card-':'')+stamp()+'.csv',false);
+  deliver(new Blob(['\ufeff'+rows.join('\r\n')],{type:'text/csv'}),'collectors-desk-listing-DRAFT-'+(list.length===1?'1-card-':'')+stamp()+'.csv',false);
 }
 function slug(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30); }
 async function exportZip(){
@@ -813,19 +969,21 @@ async function exportZip(){
     csv.push([i+1,c.player,c.year,c.team,pn.fo,pn.fc,pn.bo,pn.bc,mine.join(' ')].map(csvEsc).join(','));
   });
   files.push({name:'cards.csv',blob:new Blob([csv.join('\n')],{type:'text/csv'})});
-  files.push({name:'README.txt',blob:new Blob(['Moose Cards photo export\r\n\r\n-original.jpg  = the photo exactly as you took it.\r\n-cleaned.jpg   = straightened and lighting evened out on your phone. The card itself is unchanged (no scratch, crease or wear touching-up).\r\n-mine-N.jpg    = extra photos you added yourself.\r\n'+(anyC?'':'\r\n(No cleaned photos yet. Use "Clean up photo" on a card.)\r\n')],{type:'text/plain'})});
+  files.push({name:'README.txt',blob:new Blob(['Collectors Desk photo export (Mr. Moose Enterprises, LLC)\r\n\r\n-original.jpg  = the photo exactly as you took it.\r\n-cleaned.jpg   = straightened and lighting evened out on your phone. The card itself is unchanged (no scratch, crease or wear touching-up).\r\n-mine-N.jpg    = extra photos you added yourself.\r\n'+(anyC?'':'\r\n(No cleaned photos yet. Use "Clean up photo" on a card.)\r\n')],{type:'text/plain'})});
   var z=await MC().makeZip(files);
-  deliver(z,'moose-cards-photos-'+stamp()+'.zip',false);
+  deliver(z,'collectors-desk-photos-'+stamp()+'.zip',false);
 }
 async function d2b(d){ if(!d) return null; var r=await fetch(d); return await r.blob(); }
 async function importFile(file){
-  var j; try{ j=JSON.parse(await file.text()); }catch(e){ MC().toast('That file is not a Binder backup.',3500,true); return; }
-  if(!j||j.app!=='moose-cards-binder'||!Array.isArray(j.cards)){ MC().toast('That file is not a Binder backup.',3500,true); return; }
+  var j; try{ j=JSON.parse(await file.text()); }catch(e){ MC().toast('That file is not a Collectors Desk backup.',3500,true); return; }
+  if(!j||j.app!=='moose-cards-binder'||!Array.isArray(j.cards)){ MC().toast('That file is not a Collectors Desk backup.',3500,true); return; }
   var have={}; B.cards.forEach(function(c){have[c.id]=1});
-  var fresh=j.cards.filter(function(c){return !have[c.id]}).length;
-  MC().askDlg('Restore this backup?',j.cards.length+' cards and '+(j.binders||[]).length+' binders in the file. '+fresh+' card'+(fresh===1?' is':'s are')+' new to this phone and will be added. Cards you already have are left alone.',[
-    {label:'Add them',cls:'gold',fn:async function(){
-      MC().toast('Restoring…',2500); var added=0;
+  var fresh=j.cards.filter(function(c){return c&&c.id&&!have[c.id]}).length, nb=(j.binders||[]).filter(function(b){return !binderById(b.id)}).length;
+  var when1=j.exported?(' Saved '+new Date(j.exported).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'})+'.'):'';
+  if(!fresh){ MC().askDlg('Nothing new in this backup',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, 0 new. Everything in it is already on this device, so nothing was changed.'+when1,[{label:'OK',cls:'gold'}]); return; }
+  MC().askDlg('Restore from this backup?',j.cards.length+' card'+(j.cards.length===1?'':'s')+' found, '+fresh+' new.'+when1+' New cards are added. Cards you already have are left exactly as they are'+(nb?'. '+nb+' new binder'+(nb===1?'':'s')+' too':'')+'. You can undo it right after.',[
+    {label:'Add '+fresh+' new card'+(fresh===1?'':'s'),cls:'gold',fn:async function(){
+      MC().toast('Restoring\u2026',2500); var ids=[], wasGone={}, newB=[], memb=[];
       for(var i=0;i<j.cards.length;i++){
         var o=j.cards[i]; if(!o||!o.id||have[o.id]) continue;
         var c=newCard(o.id); Object.keys(o).forEach(function(k){ if(['front','back','photos','thumb','clean','cthumb'].indexOf(k)<0) c[k]=o[k]; });
@@ -834,13 +992,23 @@ async function importFile(file){
         if(c.front||c.back) c.thumb=await thumb(c.front||c.back);
         for(var sd=0;sd<2;sd++){ var sn=sd?'back':'front', oc=o.clean&&o.clean[sn]; if(oc&&c[sn]){ var cb=await d2b(oc.data); if(cb) c.clean[sn]={blob:cb,notes:oc.notes||[],found:!!oc.found,msg:oc.msg||'',ts:oc.ts||Date.now(),mode:oc.mode||'raw',src:c[sn].size}; } }
         await refreshCThumb(c);
-        delete B.gone[c.id]; del('gone',c.id);
-        B.cards.push(c); await put('cards',c); added++; have[c.id]=1; if(i%4===3) await sleep(0);
+        if(B.gone[c.id]){ wasGone[c.id]=1; delete B.gone[c.id]; del('gone',c.id); }
+        B.cards.push(c); await put('cards',c); ids.push(c.id); have[c.id]=1; if(i%4===3) await sleep(0);
       }
-      (j.binders||[]).forEach(function(ob){ var b=binderById(ob.id); if(!b){ b={id:ob.id,name:ob.name,type:ob.type||'collection',ts:ob.ts||Date.now(),ids:[]}; B.binders.push(b); }
-        (ob.ids||[]).forEach(function(id){ if(have[id]&&b.ids.indexOf(id)<0) b.ids.push(id); }); saveBinder(b); });
-      MC().toast('Restored '+added+' card'+(added===1?'':'s')+'. ✓',3500); renderBackup(); askPersist();
+      (j.binders||[]).forEach(function(ob){ var b=binderById(ob.id); if(!b){ b={id:ob.id,name:ob.name,type:ob.type||'collection',ts:ob.ts||Date.now(),ids:[]}; B.binders.push(b); newB.push(b.id); }
+        (ob.ids||[]).forEach(function(id){ if(have[id]&&b.ids.indexOf(id)<0){ b.ids.push(id); if(newB.indexOf(b.id)<0&&ids.indexOf(id)>=0) memb.push([b.id,id]); } }); saveBinder(b); });
+      B.lastRestore={ids:ids,wasGone:wasGone,newB:newB,memb:memb};
+      askPersist(); afterBackupChange();
+      MC().askDlg('Restored \u2713',ids.length+' card'+(ids.length===1?'':'s')+' added to your binder. Nothing you already had was changed.',[{label:'Done',cls:'gold'},{label:'Undo, remove those '+ids.length,cls:'ghost',fn:function(){ undoRestore(); }}]);
     }},{label:'Cancel',cls:'ghost'}]);
+}
+async function undoRestore(){
+  var r=B.lastRestore; if(!r||!r.ids.length){ MC().toast('Nothing to undo.'); return; }
+  MC().toast('Undoing\u2026',2000);
+  for(var i=0;i<r.ids.length;i++){ var c=byId(r.ids[i]); if(c){ await removeCard(c,false); if(r.wasGone[c.id]){ B.gone[c.id]=1; await put('gone',{id:c.id}); } } }
+  r.memb.forEach(function(m){ var b=binderById(m[0]); if(b){ var k=b.ids.indexOf(m[1]); if(k>=0){ b.ids.splice(k,1); saveBinder(b); } } });
+  for(var q=0;q<r.newB.length;q++){ var nb=binderById(r.newB[q]); if(nb){ B.binders=B.binders.filter(function(x){return x!==nb}); await del('binders',nb.id); } }
+  var n=r.ids.length; B.lastRestore=null; afterBackupChange(); MC().toast('Undone. Removed the '+n+' restored card'+(n===1?'':'s')+'.',3200);
 }
 
 /* ---------- start-up / wiring ---------- */

@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0a08">
-<title>Guided Scan · v0.8</title>
+<link rel="icon" href="data:,">
+<title>Collectors Desk · v0.9</title>
 <style>
-:root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0a0908;--walnut:rgba(74,50,32,.30);--walnut-line:rgba(190,140,80,.30);--mat:#2b2b2a;--panel:rgba(22,17,12,.82);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
+:root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0a0908;--ongold:#1a1405;--walnut2:#3a281a;--walnut:rgba(74,50,32,.30);--walnut-line:rgba(190,140,80,.30);--mat:#2b2b2a;--panel:rgba(22,17,12,.82);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;overflow:hidden;overscroll-behavior:none}
 .screen{position:fixed;inset:0;display:none;flex-direction:column}
@@ -221,18 +222,74 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #flipAct #flipRetake{display:none;background:linear-gradient(135deg,#ffcf6a,#e0a020);color:#1a1405}
 #slvChip.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1a1405;font-weight:700}
 #hud .row .chip{padding:9px 10px}
+
+/* ---- v0.9: What next? redesign. Big gallery + side panel (landscape) or sticky bar (portrait) ---- */
+#rev{padding:0}
+#revScroll{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0}
+#revMain{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 calc(env(safe-area-inset-right) + 14px) 14px calc(env(safe-area-inset-left) + 14px)}
+#revHead{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+#revHead h1{font-size:26px;margin:0}
+#sum{margin:2px 0 6px}
+#cntEd{padding:0;margin:4px 0 8px;background:none;border:0}
+#cntEd summary{display:inline-block;list-style:none;cursor:pointer;font-size:13px;color:var(--mut);padding:6px 12px;border:1px solid rgba(212,168,75,.3);border-radius:999px;min-height:32px;line-height:20px}
+#cntEd summary::-webkit-details-marker{display:none}
+#cntEd[open] summary{color:var(--gold2)}
+#cntEd[open]{background:rgba(255,255,255,.05);border:1px solid rgba(212,168,75,.3);border-radius:14px;padding:8px 12px 10px}
+#cntEd[open] summary{border:0;padding:2px 0 8px}
+#rev #grid{flex:none;max-height:none;overflow:visible;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;padding:2px 0 10px;min-height:0}
+#rev #grid .t{aspect-ratio:.72;border-radius:12px}
+#rev #grid .t em{font-size:12px;padding:4px 7px}
+#next{flex:none;margin:0;border-radius:0;border:0;border-top:1px solid rgba(212,168,75,.45);background:rgba(18,15,9,.97);padding:8px calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 12px);max-height:62vh;overflow-y:auto}
+#next h2{display:none}
+#nxBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#nxBtns button{margin:0;width:auto;min-height:52px;padding:8px 10px;font-size:15.5px;display:none}
+#nxBtns button small{display:none}
+#nxBtns button.pri{display:block}
+#next.open #nxBtns button{display:block}
+#nxBtns #nxHome{grid-column:1/-1}
+#nxMore{display:block;margin:2px auto 0;min-height:40px}
+#next:not(.open) #saveInfo{display:none}
+#next.open #saveInfo{display:block}
+#next #saveInfo{margin:4px 2px 0}
+@media (min-width:640px) and (orientation:landscape){
+  #revScroll{flex-direction:row}
+  #revMain{padding-top:2px}
+  #rev #grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  #next{width:300px;max-height:none;border-top:0;border-left:1px solid rgba(212,168,75,.45);padding:14px 14px calc(env(safe-area-inset-bottom) + 14px) 14px;padding-right:calc(env(safe-area-inset-right) + 14px)}
+  #next h2{display:block;font-size:22px;color:var(--gold2);margin:0 0 10px}
+  #nxBtns{grid-template-columns:1fr;gap:8px}
+  #nxBtns button{display:block;min-height:54px;text-align:left;padding:8px 14px;font-size:16px}
+  #nxBtns button small{display:block;font-size:11.5px;margin-top:1px}
+  #nxMore{display:none}
+  #next #saveInfo{display:block}
+}
+@media (min-width:640px) and (orientation:portrait){
+  #rev #grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  #nxBtns{grid-template-columns:repeat(4,1fr)}
+  #nxBtns button{font-size:15px;display:block}
+  #nxBtns button small{display:none}
+  #nxMore{display:none}
+  #next #saveInfo{display:block}
+}
+@media (max-height:480px) and (orientation:landscape){
+  #next{width:250px}
+  #nxBtns button{min-height:44px;padding:6px 12px;font-size:15px}
+  #nxBtns button small{display:none}
+  #revHead h1{font-size:22px}
+}
 </style>
-<link rel="stylesheet" href="binder.css?v=0.8">
+<link rel="stylesheet" href="binder.css?v=0.9">
 </head>
 <body>
 
 <section id="home" class="screen on">
   <div id="homeScroll">
-    <div class="crest">Moose Cards · v0.8</div>
-    <h1>Guided Scan</h1>
-    <p class="sub">Scan your cards fast. Everything stays on your phone.</p>
+    <div id="homeHead"><div class="crest">Collectors Desk · v0.9</div>
+    <h1>Collectors Desk</h1>
+    <p class="sub">Scan your cards fast. Everything stays on this device.</p></div>
     <div id="homeWarn"></div>
-    <div id="paneB" class="pane on"></div>
+    <div id="paneH" class="pane on"></div>
+    <div id="paneB" class="pane"></div>
     <div id="paneS" class="pane">
       <button class="gold-btn" id="startScan">Start a scan</button>
       <div class="lab">Your scans</div>
@@ -247,14 +304,14 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
       <div class="pvnote" style="text-align:center">Clearing scans does not touch your Binder. Your Binder keeps its own copies.</div>
     </div>
     <div id="paneD" class="pane"></div>
-    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:6px">Guided Scan v0.8 · Moose Cards</div>
+    <div style="text-align:center;color:#6f664f;font-size:12px;margin-top:6px">Collectors Desk v0.9 · © Mr. Moose Enterprises, LLC</div>
   </div>
-  <nav id="tabs"><button data-t="b" class="on"><b>📚</b>Binders</button><button data-t="s"><b>📷</b>Scan</button><button data-t="d"><b>💾</b>Backup</button></nav>
+  <nav id="tabs"><button data-t="h" class="on"><b><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></b>Home</button><button data-t="b"><b><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></b>Binders</button><button data-t="s"><b><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></b>Scan</button><button data-t="d"><b><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></b>Backup<i class="tdot"></i></button></nav>
 </section>
 
 <section id="pre" class="screen">
-  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.8</span></div>
-  <div class="crest">Moose Cards · prototype v0.8</div>
+  <div class="hdr"><button class="chip homeb">⌂ Home</button><span class="hv">v0.9</span></div>
+  <div class="crest">Collectors Desk · prototype v0.9</div>
   <h1>Get ready</h1>
   <p class="sub">Glide your phone slowly along a row of cards. I record the video and pick the best photo of each card for you. Everything stays on your phone.</p>
 
@@ -293,7 +350,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <button class="gold-btn" id="go">Start camera</button>
   <div id="err" role="alert"></div>
   <div class="priv">Nothing is uploaded. Photos are kept on this phone until you delete them.</div>
-  <footer>Guided Scan v0.8 · Moose Cards</footer>
+  <footer>Collectors Desk v0.9 · © Mr. Moose Enterprises, LLC</footer>
 </section>
 
 <section id="cam" class="screen">
@@ -326,7 +383,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="sav" class="screen">
-  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.8</span></div>
+  <div class="hdr" style="position:absolute;left:0;right:0;top:0"><button class="chip homeb" id="savHome">⌂ Home</button><span class="hv">v0.9</span></div>
   <div class="box">
     <div class="spin" aria-hidden="true"></div>
     <h2>Saving your scan…</h2>
@@ -337,41 +394,47 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="rev" class="screen">
-  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.8</span></div>
+  <div class="hdr"><button class="chip homeb" id="revHome">⌂ Home</button><span class="hv">Section <span id="revSec">1</span> · v0.9</span></div>
   <div id="revScroll">
-    <h1>Your cards</h1>
-    <div id="sum"></div>
-    <div id="revNote"></div>
-    <div id="cntEd">
-      <div class="r1"><span>Cards in this section</span>
-        <div class="stp"><button id="cm" aria-label="One less">−</button><input id="cin" type="number" inputmode="numeric" min="0" max="60"><button id="cp" aria-label="One more">+</button></div></div>
-      <p id="cedH"></p>
-      <button class="ghost-btn" id="cedGo">Update count</button>
+    <div id="revMain">
+      <div id="revHead"><h1>Your cards</h1><div id="sum"></div></div>
+      <div id="revNote"></div>
+      <div id="revNudge"></div>
+      <details id="cntEd">
+        <summary>Wrong number of cards? Fix the count</summary>
+        <div class="r1"><span>Cards in this section</span>
+          <div class="stp"><button id="cm" aria-label="One less">−</button><input id="cin" type="number" inputmode="numeric" min="0" max="60"><button id="cp" aria-label="One more">+</button></div></div>
+        <p id="cedH"></p>
+        <button class="ghost-btn" id="cedGo">Update count</button>
+      </details>
+      <div id="dupNote"></div>
+      <div id="grid"></div>
+      <div id="more">
+        <button class="linkb" id="addMan">Missed one? Add a card by hand</button>
+        <button class="linkb" id="keepScan">Keep scanning this section</button>
+        <button class="linkb" id="delScan">Delete this scan</button>
+      </div>
     </div>
-    <div id="dupNote"></div>
-    <div id="grid"></div>
-    <div id="next">
+    <aside id="next" aria-label="What next?">
       <h2>What next?</h2>
-      <button class="gold-btn" id="nxName">Name your cards<small>Quick, one at a time. You can skip any card.</small></button>
-      <button class="ghost-btn" id="nxBinder">Open my Binder<small>Your cards are already in it</small></button>
-      <button class="ghost-btn" id="nxFlip">Review each card<small>Flip through big. Mark Sell, Keep or Grade</small></button>
-      <button class="ghost-btn" id="nxSend">Send or share<small>Share, email yourself, or save</small></button>
+      <div id="nxBtns">
+      <button class="gold-btn pri" id="nxName">Name your cards<small>Reads each photo for you. You check it.</small></button>
+      <button class="ghost-btn pri" id="nxBinder">Open my Binder<small>Your cards are already in it</small></button>
       <button class="gold-btn" id="nxBacks">Scan the backs<small>Same order as the fronts</small></button>
+      <button class="ghost-btn" id="nxFlip">Review each card<small>Flip through big. Mark Sell, Keep or Grade</small></button>
       <button class="ghost-btn" id="nxSec">Scan another section<small>Start a fresh scan, up to 30 more cards</small></button>
-      <button class="gold-btn dim" id="nxSave">Save to my phone<small>Video + photos zip</small></button>
-      <p id="saveInfo"></p>
+      <button class="ghost-btn" id="nxSave">Save to my phone<small>This scan's video + photos (zip). Not your backup</small></button>
+      <button class="ghost-btn" id="nxSend">Send or share<small>Share, email yourself, or save</small></button>
       <button class="ghost-btn" id="nxHome">Done, back to home</button>
-    </div>
-    <div id="more">
-      <button class="linkb" id="addMan">Missed one? Add a card by hand</button>
-      <button class="linkb" id="keepScan">Keep scanning this section</button>
-      <button class="linkb" id="delScan">Delete this scan</button>
-    </div>
+      </div>
+      <button class="linkb" id="nxMore">More choices ▾</button>
+      <p id="saveInfo"></p>
+    </aside>
   </div>
   <div class="modal" id="viewer"><h2 id="vT"></h2><p class="vh" id="vH"></p><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
 </section>
 <section id="flip" class="screen">
-  <div class="hdr"><button class="chip homeb" id="flipHome">⌂ Home</button><span class="hv">Section <span id="flipSec">1</span> · v0.8</span></div>
+  <div class="hdr"><button class="chip homeb" id="flipHome">⌂ Home</button><span class="hv">Section <span id="flipSec">1</span> · v0.9</span></div>
   <div id="flipBody">
     <div id="flipTop"><h1 id="flipN">Card 1 of 1</h1>
       <div id="flipSide"><button id="fsF" class="on">Front</button><button id="fsB">Back</button></div></div>
@@ -389,7 +452,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="send" class="screen">
-  <div class="hdr"><button class="chip homeb" id="sendHome">⌂ Home</button><span class="hv">Section <span id="sendSec">1</span> · v0.8</span></div>
+  <div class="hdr"><button class="chip homeb" id="sendHome">⌂ Home</button><span class="hv">Section <span id="sendSec">1</span> · v0.9</span></div>
   <div id="sendBody">
     <h1>Send</h1>
     <div id="sendSum"></div>
@@ -403,7 +466,7 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 
 
 <section id="bv" class="screen">
-  <div class="hdr"><button class="chip homeb2" id="bvBack">‹ Binders</button><span class="hv">v0.8</span></div>
+  <div class="hdr"><button class="chip homeb2" id="bvBack">‹ Binders</button><span class="hv">v0.9</span></div>
   <div id="bvBody">
     <div id="bvTitleRow"><h1 id="bvTitle">All cards</h1><button class="chip" id="bvMenu" style="display:none">⋯ Manage</button></div>
     <div id="bvSub"></div>
@@ -418,13 +481,15 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 </section>
 
 <section id="cd" class="screen">
-  <div class="hdr"><button class="chip" id="cdBack">‹ Back</button><span class="hv">v0.8</span></div>
+  <div class="hdr"><button class="chip" id="cdBack">‹ Back</button><span class="hv">v0.9</span></div>
   <div id="cdBody">
     <div id="cdTop"><button class="chip" id="cdPrev" aria-label="Previous card">‹</button><h1 id="cdN">Card</h1><button class="chip" id="cdNext" aria-label="Next card">›</button></div>
+    <div id="cdCols"><div id="cdL">
     <div class="phwrap"><img id="cdImg" alt="Card photo"><span class="fl" id="cdFl"></span><button class="rm" id="cdRm">Remove photo</button></div>
     <div id="cdClean"></div>
     <div class="phstrip" id="cdStrip"></div>
     <button class="gold-btn dbtn2" id="cdListing">📝 Listing sheet<small>Draft a title and description for selling this card</small></button>
+    </div><div id="cdR">
     <div class="savd" id="cdSaved"></div>
     <div class="frm" id="cdForm"></div>
     <div class="sect">Binders</div>
@@ -432,28 +497,37 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
     <button class="ghost-btn" id="cdMove" style="width:100%;margin-top:10px">Move to another binder…</button>
     <p class="pvnote" id="cdMeta"></p>
     <button class="dang" id="cdDel">Delete this card</button>
+    </div></div>
     <input type="file" id="cdFile" accept="image/*" multiple style="display:none">
     <input type="file" id="cdCam" accept="image/*" capture="environment" style="display:none">
   </div>
 </section>
 
 <section id="nm" class="screen">
-  <div class="hdr"><button class="chip" id="nmBack">‹ Skip all, my Binder</button><span class="hv">v0.8</span></div>
+  <div class="hdr"><button class="chip" id="nmBack">‹ Stop, go to my Binder</button><span class="hv">v0.9</span></div>
   <div id="nmBody">
     <div id="nmTop"><h1 id="nmN">Card 1</h1></div>
     <div id="nmProg"><i></i></div>
-    <div class="phwrap" id="nmPh"><img id="nmImg" alt="Card photo"><span class="fl" id="nmFl"></span></div>
-    <div class="pvnote" id="nmPre"></div>
-    <div id="nmTeamLast"></div>
-    <div class="frm" id="nmForm"></div>
-    <button class="ghost-btn" id="nmOcr" style="width:100%">✨ Try auto-read names<small style="display:block;font-size:12px;opacity:.8">Optional. Reads on your phone. Suggestions only.</small></button>
-    <div id="nmOcrOut"></div>
+    <div id="nmRd" style="display:none"></div>
+    <div id="nmCols">
+      <div id="nmL">
+        <div class="phwrap" id="nmPh"><img id="nmImg" alt="Card photo"><span class="fl" id="nmFl"></span></div>
+        <div id="nmCardSt"></div>
+      </div>
+      <div id="nmR">
+        <div class="pvnote" id="nmPre"></div>
+        <div id="nmTeamLast"></div>
+        <div class="frm" id="nmForm"></div>
+        <div id="nmHints"></div>
+        <div class="pvnote">Never guessed: condition notes, flaws and price. Those are yours to enter.</div>
+      </div>
+    </div>
     <div id="nmAct"><button class="ghost-btn" id="nmPrev">‹ Back</button><button class="ghost-btn" id="nmSkip">Skip</button><button class="gold-btn" id="nmNext">Next ›</button></div>
   </div>
 </section>
 
 <section id="ls" class="screen">
-  <div class="hdr"><button class="chip" id="lsBack">‹ Back to card</button><span class="hv">v0.8</span></div>
+  <div class="hdr"><button class="chip" id="lsBack">‹ Back to card</button><span class="hv">v0.9</span></div>
   <div id="lsBody">
     <h1 id="lsH">Listing sheet</h1>
     <p class="pvnote" id="lsIntro"></p>
@@ -471,15 +545,18 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 
 <div id="pr"><h2 id="prT"></h2><input id="prIn" class="in" type="text" autocomplete="off"><div class="segb in" id="prType" style="display:none"><button data-v="collection">Collection</button><button data-v="inventory">Inventory</button></div><p id="prNote" style="margin:0;color:var(--mut);font-size:14px;line-height:1.4;max-width:330px"></p><div class="mbtns"><button class="gold-btn" id="prOk">Save</button><button class="ghost-btn" id="prNo">Cancel</button></div></div>
 
-<div id="info"><h2>Info · v0.8</h2><pre id="infoTxt"></pre>
+<div id="info"><h2>Info · v0.9</h2><pre id="infoTxt"></pre>
   <div class="r"><button class="ghost-btn" id="infoCopy">Copy</button><button class="ghost-btn" id="infoLive">Live numbers</button><button class="ghost-btn" id="infoTimed">Timed mode: off</button></div>
   <div class="r"><button class="ghost-btn" id="infoClear">Clear log</button><button class="gold-btn" id="infoClose">Close</button></div></div>
 <div id="undoBar" role="status"><span id="ubMsg"></span><button id="ubBtn">Undo</button></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="dlg"><h2 id="dlgT"></h2><p id="dlgP"></p><div class="mbtns" id="dlgB"></div></div>
-<script src="cleanup.js?v=0.8"></script>
-<script src="listing.js?v=0.8"></script>
-<script src="binder.js?v=0.8"></script>
+<script src="ocr-dict.js?v=0.9"></script>
+<script src="ocr-parse.js?v=0.9"></script>
+<script src="ocr.js?v=0.9"></script>
+<script src="cleanup.js?v=0.9"></script>
+<script src="listing.js?v=0.9"></script>
+<script src="binder.js?v=0.9"></script>
 <script>
 (function(){
 'use strict';
@@ -500,8 +577,8 @@ var rect={x:0,y:0,w:100,h:100};
 var CAN_REC=!!(window.MediaRecorder);
 if(!CAN_REC) $('recNote').style.display='flex';
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
-/* ---------- v0.8: tiny log + Info panel (for screenshots) ---------- */
-var LOG=[], T0=Date.now(), VERSION='v0.8';
+/* ---------- v0.9: tiny log + Info panel (for screenshots) ---------- */
+var LOG=[], T0=Date.now(), VERSION='v0.9';
 try{ var _o=JSON.parse(localStorage.getItem('mc-log')||'[]'); if(_o&&_o.length){ LOG=_o.slice(-40); LOG.push('--- page reloaded ---'); } }catch(e){}
 function log(m){
   var t=((Date.now()-T0)/1000).toFixed(1); LOG.push(t+'s '+m); if(LOG.length>300) LOG.splice(0,LOG.length-300);
@@ -888,7 +965,7 @@ function scanTick(now,r,raw,jr,Q){
   var T=S.T, sg=S.seg;
   if(now-S.t0>MAX_SEC*1000){ stopScan('time'); return; }
   var np=nPos(), dx=np.x-T.ox, dy=np.y-T.oy, dist=Math.hypot(dx,dy);
-  // ---- v0.8 safety net: if tracking looks stuck, switch to timed capture (~1.5 s of steady frames per card) ----
+  // ---- v0.9 safety net: if tracking looks stuck, switch to timed capture (~1.5 s of steady frames per card) ----
   var fd=0, G=raw.gray, PG0=S.prevG; if(PG0&&PG0.length===G.length){ var qi,qs=0,qn=0; for(qi=0;qi<G.length;qi+=2){qs+=Math.abs(G[qi]-PG0[qi]);qn++} fd=qs/qn; } S.prevG=G;
   S.weakAvg=S.weakAvg*.93+((!T.ok||T.lost)?1:0)*.07;
   if(!sg.refG&&now-sg.t0>300) sg.refG=G;
@@ -968,7 +1045,7 @@ function finishedCheck(force){
   if(list().length>=cap()){ stopScan(S.phase==='backs'?'backsdone':'limit'); return true; }
   return false;
 }
-/* v0.8: capture right now (button), or from the timed backup. Always works, even if tracking is lost. */
+/* v0.9: capture right now (button), or from the timed backup. Always works, even if tracking is lost. */
 function forceCapture(reason){
   var r=vidRegion(), now=performance.now(), sg=S.seg; if(!r||!sg||S.state!=='scanning') return;
   var a=analyze(r), sgc=sg.canvas||(sg.canvas=document.createElement('canvas')), sc=Math.min(1,1100/r.sw);
@@ -1231,7 +1308,7 @@ function prepZip(s,onp){
   if(s.zip) { if(onp) onp(1); return Promise.resolve(s.zip); }
   if(s.zipP) return s.zipP;
   var v=s.ver;
-  var files=[],man='Moose Cards Guided Scan v0.8 (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nSleeved: '+(s.sleeve!==false?'yes':'no')+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
+  var files=[],man='Collectors Desk v0.9 (Mr. Moose Enterprises, LLC) (row video scan)\nSection '+s.num+'\nGuide: '+s.mode+'\nSleeved: '+(s.sleeve!==false?'yes':'no')+'\nFlow: '+s.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
   var n=Math.max(s.fronts.length,s.backs.length);
   for(var i=0;i<n;i++){
     var f=s.fronts[i],b=s.backs[i];
@@ -1316,7 +1393,7 @@ function goHomeNow(){
   if(s&&isEmpty(s)) S.sessions=S.sessions.filter(function(x){return x!==s});
   stopCam(); S.state='ready'; S.manual=null; S.cur=null; S.fronts=[]; S.backs=[]; S.videos=[]; S.sec={fronts:0,backs:0}; S.phase='fronts'; S.revNote='';
   closeDlg(); $('mod').classList.remove('on'); $('viewer').classList.remove('on');
-  renderHome(); show('home'); if(window.Binder){ Binder.renderHome(); Binder.tabTo('b'); }
+  renderHome(); show('home'); if(window.Binder){ Binder.tabTo('h'); }
 }
 [].forEach.call(document.querySelectorAll('.homeb'),function(b){ b.addEventListener('click',goHome); });
 
@@ -1325,7 +1402,7 @@ function openReview(s){
   if(s&&s.fronts&&s!==S.cur) loadSession(s);
   if(!S.cur) return;
   $('mod').classList.remove('on'); $('viewer').classList.remove('on');
-  renderRev(); show('rev'); $('revScroll').scrollTop=0;
+  renderRev(); show('rev'); $('revMain').scrollTop=0;
 }
 function renderRev(){
   var s=S.cur; if(!s) return;
@@ -1339,7 +1416,7 @@ function renderRev(){
       else h+='<button class="t'+(x.dup?' dp':(x.conf==='review'?' rv':''))+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(pr[0]==='fronts'&&x.label?'<u class="'+x.label+'">'+x.label+'</u>':'')+(x.dup?'<i>Looks like a duplicate</i>':(x.conf==='review'?'<b>check</b>':''))+(x.conf==='review'?'<span class="rt" data-rt="1">↻ Retake</span>':'')+'</button>';
     });
   });
-  $('grid').innerHTML=h||'<p style="grid-column:1/5;color:#a79d86">Nothing captured yet.</p>';
+  $('grid').innerHTML=h||'<p style="grid-column:1/-1;color:#a79d86">Nothing captured yet.</p>';
   var sum='<span class="big"><b>'+st.f+'</b> card'+(st.f===1?'':'s')+' found</span>';
   if(st.look) sum+='<span class="pill">'+st.look+' need a look</span>';
   if(dupN) sum+='<span class="pill red">'+dupN+' look like duplicates</span>';
@@ -1354,12 +1431,15 @@ function renderRev(){
   var needBacks=s.fronts.length>0&&s.backs.length<s.fronts.length;
   var nb=$('nxBacks'); nb.style.display=needBacks?'block':'none';
   nb.firstChild.textContent=s.backs.length?'Scan more backs':'Scan the backs';
-  nb.className=needBacks?'gold-btn':'ghost-btn';
-  var ns=$('nxSave'); ns.className='gold-btn'+((needBacks&&!s.saved)?' dim':'');
+  nb.className=(needBacks?'gold-btn':'ghost-btn')+(needBacks?' pri':''); $('nxBinder').className='ghost-btn'+(needBacks?'':' pri');
+  var ns=$('nxSave'); ns.className='ghost-btn';
   $('addMan').style.display=(list('fronts').length<CAP)?'inline-block':'none';
   $('keepScan').style.display=(s.phase==='backs'?s.backs.length<s.fronts.length:s.fronts.length<CAP)?'inline-block':'none';
+  refreshRevNudge();
   refreshSave();
 }
+function refreshRevNudge(){ var e=$('revNudge'); if(e&&window.Binder) e.innerHTML=Binder.nudgeHTML('data-rn'); }
+$('revNudge').addEventListener('click',function(e){ var b=e.target.closest('[data-rn]'); if(!b) return; if(b.dataset.rn==='savebk') Binder.saveBackup(); else { Binder.dismissNudge(); refreshRevNudge(); } });
 function refreshSave(){
   var s=S.cur; if(!s) return;
   var b=$('nxSave'), info='';
@@ -1452,6 +1532,7 @@ $('delScan').addEventListener('click',function(){
 });
 
 /* what next */
+$('nxMore').addEventListener('click',function(){ var n=$('next'); n.classList.toggle('open'); this.textContent=n.classList.contains('open')?'Fewer choices ▴':'More choices ▾'; });
 $('nxBacks').addEventListener('click',async function(){
   if(S.busy) return; S.busy=true; var s=S.cur;
   try{ await ensureCam(); }catch(e){ toast(friendlyErr(e),4000,true); S.busy=false; return; }
@@ -1489,7 +1570,7 @@ function saveToPhone2(s,thenHome){
   var canS=function(f){ try{ return navigator.canShare&&navigator.canShare({files:f}); }catch(e){ return false; } };
   if(navigator.share&&navigator.canShare&&(canS(files)||canS([zf]))){
     var useAll=canS(files), use=useAll?files:[zf];
-    navigator.share({files:use,title:'Moose Cards scan'}).then(function(){
+    navigator.share({files:use,title:'Collectors Desk scan'}).then(function(){
       if(!useAll&&vfiles.length) { finish('Photos saved. Tap the buttons for the video.'); links(all.slice(1),function(){toast("Saved. You're all set.",3000)}); }
       else finish();
     },function(e){
@@ -1602,14 +1683,14 @@ $('go').addEventListener('click',async function(){
   try{ await ensureCam(); }catch(e){ $('err').textContent=friendlyErr(e); S.busy=false; return; }
   S.busy=false; createSession(); goCam('Fit one card inside the frame. Tilt slightly, soft side light. Then tap Start sweep.',4500);
 });
-window.MC={log:log,toast:toast,askDlg:askDlg,closeDlg:closeDlg,show:show,makeZip:makeZip,ensureUids:ensureUids,openInfo:openInfo,startScan:function(){show('pre')},renderScans:function(){renderHome()}};
+window.MC={log:log,toast:toast,askDlg:askDlg,closeDlg:closeDlg,show:show,makeZip:makeZip,ensureUids:ensureUids,openInfo:openInfo,refreshRevNudge:refreshRevNudge,startScan:function(){show('pre')},renderScans:function(){renderHome()}};
 S.test={simSAD:simSAD,AW:AW,AHf:function(){return Math.round(AW/(rect.w/rect.h))}};
 window.__scan=S; window.__sim=simSAD; window.__dbg={simSAD:simSAD}; window.__render=renderRev; window.__flip=openFlip; // for testing
 (async function init(){
   S.db=await idbOpen();
   try{ await restore(); }catch(e){ log('restore failed '+e); }
   try{ await Binder.init(); }catch(e){ log('binder init failed '+e); }
-  renderHome(); Binder.tabTo('b');
+  renderHome(); Binder.tabTo('h');
   // move scans from v0.6 and earlier into the Binder (originals stay untouched in Your scans)
   var before=Binder.count(), moved=0;
   for(var i=0;i<S.sessions.length;i++){ try{ moved+=await Binder.syncSession(S.sessions[i]); }catch(e){} }
