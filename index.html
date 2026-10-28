@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0a08">
-<title>Guided Scan · prototype v0.3</title>
+<title>Guided Scan · prototype v0.4</title>
 <style>
 :root{--gold:#d4a84b;--gold2:#f3d98b;--bg:#0b0a08;--panel:rgba(18,16,12,.80);--txt:#f4efe3;--mut:#a79d86;--g:#3ddc84;--a:#ffb53d;--r:#ff5252;--fc:#ff5252}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -35,7 +35,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing
 /* camera */
 #cam{background:#000}
 video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-#frame{position:absolute;pointer-events:none;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.52);transition:opacity .2s}
+#frame{position:absolute;pointer-events:none;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.30);transition:opacity .2s}
 #frame .c{position:absolute;width:38px;height:38px;border:0 solid var(--fc);transition:border-color .2s}
 #frame .c.tl{left:-3px;top:-3px;border-left-width:6px;border-top-width:6px;border-top-left-radius:16px}
 #frame .c.tr{right:-3px;top:-3px;border-right-width:6px;border-top-width:6px;border-top-right-radius:16px}
@@ -81,20 +81,43 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
 #rev{background:var(--bg);padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 14px)}
 #rev h1{font-size:26px;color:var(--gold2)}
 #rev p{color:var(--mut);margin:6px 0 12px;font-size:14.5px;line-height:1.4}
-#grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start;padding-bottom:8px}
+#grid{flex:1;min-height:90px;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:min-content;gap:8px;align-content:start;padding-bottom:8px}
 #grid a{position:relative;display:block;aspect-ratio:.7;border-radius:10px;overflow:hidden;border:1px solid rgba(212,168,75,.4);background:#1a1710;color:var(--mut);text-decoration:none}
 #grid img{width:100%;height:100%;object-fit:cover;display:block}
 #grid em{position:absolute;left:0;right:0;bottom:0;font-style:normal;font-size:11px;padding:3px 5px;background:rgba(0,0,0,.7);color:var(--gold2)}
 #grid .skp{display:grid;place-items:center;font-size:12px}
-#rev .btns{display:flex;flex-direction:column;gap:9px;padding-top:6px}
+#rev .btns{display:flex;flex-direction:column;gap:9px;padding-top:6px;max-height:36vh;overflow-y:auto}
+#rev .btns .ghost-btn,#rev .btns .gold-btn{min-height:48px;padding:10px 16px;font-size:15px}
+
+#rec{display:none;width:12px;height:12px;border-radius:50%;background:#ff3b3b;flex:none;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.25}}
+#cnt2{display:flex;align-items:baseline;justify-content:space-between;background:var(--panel);border:1px solid rgba(212,168,75,.35);border-radius:14px;padding:6px 12px}
+#found{font-size:16px;color:var(--txt)}#found b{font-family:Georgia,serif;font-size:26px;color:var(--gold2)}
+#found.pulse b{color:#8dffbd}
+#tm{font-size:13px;color:var(--mut)}
+#qbar{height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+#qbar i{display:block;height:100%;width:0;background:var(--fc);transition:width .12s,background .2s}
+#bottom .ctrls .ghost-btn{flex:1}
+#prim{flex:2;min-height:64px;font-size:20px}
+#prim.stop{background:linear-gradient(135deg,#ff8a8a,#ff5252);color:#2a0505;box-shadow:0 6px 24px rgba(255,82,82,.35)}
+.mbtns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:330px}
+.mbtns button{width:100%}
+#rev #vids{display:flex;flex-direction:column;gap:8px}
+#grid h3{grid-column:1/-1;margin:6px 2px 0;font:400 15px Georgia,serif;color:var(--gold2)}
+#grid .t{position:relative;display:block;width:100%;font:inherit;aspect-ratio:.7;border-radius:10px;overflow:hidden;border:1px solid rgba(212,168,75,.4);background:#1a1710;color:var(--mut);padding:0}
+#grid .t.rv{border-color:var(--a);border-width:2px}
+#grid .t.ms{border-style:dashed;border-color:var(--r);display:grid;place-items:center;font-size:12px;text-align:center}
+#grid .t b{position:absolute;top:4px;right:4px;font-size:10px;font-weight:600;background:var(--a);color:#2a1a00;border-radius:8px;padding:2px 6px}
+#viewer{background:rgba(8,7,5,.95)}
+#viewer img{max-width:92%;max-height:56vh;border-radius:10px;border:1px solid var(--gold)}
 </style>
 </head>
 <body>
 
 <section id="pre" class="screen on">
-  <div class="crest">Moose Cards · prototype v0.3</div>
+  <div class="crest">Moose Cards · prototype v0.4</div>
   <h1>Guided Scan</h1>
-  <p class="sub">Line each card up in the frame. When the frame turns green and holds, I capture it for you. Your photos stay on your phone.</p>
+  <p class="sub">Glide your phone slowly along a row of cards. I record the video and pick the best photo of each card for you. Everything stays on your phone.</p>
 
   <div class="lab">What are you scanning?</div>
   <div class="seg" id="modeSeg">
@@ -102,20 +125,21 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
     <button data-v="raw">Raw cards<small>Sleeves &amp; top loaders</small></button>
   </div>
 
-  <div class="lab">How do you want to scan?</div>
+  <div class="lab">After the fronts</div>
   <div class="seg" id="flowSeg">
-    <button data-v="passes" class="on">Fronts, then backs<small>Best for big stacks</small></button>
-    <button data-v="pairs">Front + back per card<small>Flip each one</small></button>
+    <button data-v="passes" class="on">Then scan backs<small>Same order</small></button>
+    <button data-v="fronts">Fronts only<small>Skip the backs</small></button>
   </div>
 
-  <div class="tip"><i>💡</i><span>Soft light from the side works best. Keep your phone's shadow off the card.</span></div>
-  <div class="tip"><i>🃏</i><span>Fronts pass: scan the whole stack. Then flip the stack and scan the backs in the same order.</span></div>
+  <div class="tip"><i>🎞️</i><span><b>Row video scan:</b> lay 2 rows flat, fit the first card inside the frame (it should fill it), tap Start sweep, then glide along each row. About 1 to 2 seconds per card.</span></div>
+  <div class="tip"><i>💡</i><span>Soft light from the side works best. Keep your phone's shadow off the cards. Up to 30 cards per scan.</span></div>
+  <div class="tip" id="recNote" style="display:none"><i>ℹ️</i><span>This browser can't save video. I'll still find and save each card's photo.</span></div>
 
   <div class="spacer"></div>
   <button class="gold-btn" id="go">Start camera</button>
   <div id="err" role="alert"></div>
-  <div class="priv">Nothing is uploaded. Captures live in this page until you download them.</div>
-  <footer>Guided Scan v0.3 · Moose Cards</footer>
+  <div class="priv">Nothing is uploaded. Video and photos live in this page until you download them.</div>
+  <footer>Guided Scan v0.4 · Moose Cards</footer>
 </section>
 
 <section id="cam" class="screen">
@@ -123,56 +147,57 @@ video#v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgr
   <div id="frame" class="idle"><div class="edge"></div><span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span><div class="prog"><i></i></div></div>
   <div id="hud">
     <div class="row">
+      <span id="rec"></span>
       <img id="ref" alt="">
-      <div id="step">Fronts pass<small>Card 1</small></div>
+      <div id="step">Fronts sweep<small>Center the first card</small></div>
       <button class="chip" id="modeChip">Slabs</button>
       <button class="chip" id="dbgChip">Info</button>
     </div>
-    <div class="cnts">
-      <div class="cnt" id="cF">Fronts: <b>0</b> captured</div>
-      <div class="cnt" id="cB">Backs: <b>0</b> captured</div>
-    </div>
+    <div id="cnt2"><div id="found">Cards found: <b>0</b> of 30</div><div id="tm"></div></div>
+    <div id="qbar"><i></i></div>
   </div>
   <div id="coach">Starting camera…</div>
   <div id="dbg"></div>
   <div id="bottom">
-    <div id="strip"></div>
     <button class="gold-btn" id="nextpass" style="display:none">Done with fronts → scan backs</button>
     <div class="ctrls">
-      <button class="ghost-btn" id="undo">↶ Undo last</button>
-      <button id="snap" aria-label="Capture now"><i></i></button>
-      <button class="ghost-btn" id="skip">Skip ⏭</button>
+      <button class="ghost-btn" id="undo">↶ Undo</button>
+      <button class="gold-btn" id="prim">Start sweep</button>
+      <button class="ghost-btn" id="review">Review</button>
     </div>
-    <button class="ghost-btn" id="review" style="min-height:46px;padding:8px">Review &amp; download</button>
   </div>
-  <div id="flash"><div class="tick">✓</div><h2>Captured</h2><p id="flashMsg">Next card, please</p></div>
-  <div class="modal" id="flipModal"><h2 id="flipT">Now flip the stack</h2><p id="flipP">Scan the backs in the same order.</p><button class="gold-btn" id="flipOk">Ready</button></div>
+  <div class="modal" id="mod"><h2 id="modT"></h2><p id="modP"></p><div class="mbtns" id="modB"></div></div>
 </section>
 
 <section id="rev" class="screen">
-  <h1>Your captures</h1>
+  <h1>Your scan</h1>
   <p id="revP"></p>
   <div id="grid"></div>
   <div class="btns">
-    <button class="gold-btn" id="dlZip">Download all (.zip)</button>
+    <button class="gold-btn" id="dlZip">Download photos (.zip)</button>
+    <div id="vids"></div>
+    <button class="ghost-btn" id="addMan">Missed one? Add a manual capture</button>
     <button class="ghost-btn" id="backScan">Back to scanning</button>
     <button class="ghost-btn" id="startOver">Start over</button>
   </div>
+  <div class="modal" id="viewer"><h2 id="vT"></h2><img id="vImg" alt=""><div class="mbtns" id="vB"></div></div>
 </section>
-
 <script>
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
-var S={mode:'graded',flow:'passes',phase:'fronts',step:'front',fronts:[],backs:[],stream:null,
-  armed:true,cool:0,greenSince:0,prev:null,capGray:null,spike:false,busy:false,dbg:false,m:null,lastStatus:'idle',wake:null};
-var RATIO={graded:2.8/5.2,raw:2.5/3.5};
+var CAP=30, P=0.93;               // card cap per scan; card pitch in guide widths
+var S={mode:'graded',flow:'passes',phase:'fronts',state:'ready',fronts:[],backs:[],videos:[],sec:{fronts:0,backs:0},
+  stream:null,dbg:false,m:null,wake:null,looping:false,manual:null,pend:0,toast:null,seg:null,T:null,t0:0,mime:null,rec:null,recChunks:[],recWait:null,hold:0,lvl:'idle',okRun:0};
+var RATIO={graded:0.52,raw:0.70};        // looser than a real slab (.54) / card (.71)
+var WFRAC={graded:0.80,raw:0.88};
 var AW=128, ac=document.createElement('canvas'), actx=ac.getContext('2d',{willReadFrequently:true});
-var HOLD_MS=1200;
+var HOLD_MS=600, MAX_SEC=180;
 var vid=$('v'), frame=$('frame'), coach=$('coach');
 var rect={x:0,y:0,w:100,h:100};
+var CAN_REC=!!(window.MediaRecorder);
+if(!CAN_REC) $('recNote').style.display='flex';
 
-/* ---------- start screen ---------- */
 function seg(id,key){
   $(id).addEventListener('click',function(e){
     var b=e.target.closest('button'); if(!b)return;
@@ -203,61 +228,61 @@ async function openCam(){
 }
 $('go').addEventListener('click',async function(){
   $('err').textContent=''; ding(true);
-  try{
-    S.stream=await openCam();
-  }catch(e){ $('err').textContent=friendlyErr(e); return; }
+  try{ S.stream=await openCam(); }catch(e){ $('err').textContent=friendlyErr(e); return; }
   vid.srcObject=S.stream;
   try{ await vid.play(); }catch(e){}
   try{ var t=S.stream.getVideoTracks()[0]; var c=t.getCapabilities&&t.getCapabilities();
     if(c&&c.focusMode&&c.focusMode.indexOf('continuous')>=0) await t.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
   try{ if(navigator.wakeLock) S.wake=await navigator.wakeLock.request('screen'); }catch(e){}
-  show('cam'); newSession(); layout(); setTimeout(layout,300); loop();
+  show('cam'); newSession(); layout(); setTimeout(layout,300); startLoop();
 });
 function show(id){['pre','cam','rev'].forEach(function(s){$(s).classList.toggle('on',s===id)})}
 
-/* ---------- session state ---------- */
-function newSession(){
-  S.fronts=[];S.backs=[];S.phase='fronts';S.step='front';S.armed=true;S.cool=0;S.greenSince=0;S.capGray=null;
-  updateUI();
-}
+/* ---------- session ---------- */
+function list(side){return (side||S.phase)==='fronts'?S.fronts:S.backs}
+function cap(){return S.phase==='fronts'?CAP:Math.min(CAP,S.fronts.length||CAP)}
 function count(a){return a.filter(Boolean).length}
-function skipped(a){return a.length-count(a)}
+function newT(){return {key:null,keyH:0,kx:0,ky:0,px:0,py:0,ppx:0,ppy:0,lx:0,ly:0,L:0,vel:0,bad:0,ok:true,lost:false}}
+function newSession(){
+  S.fronts=[];S.backs=[];S.videos=[];S.sec={fronts:0,backs:0};S.phase='fronts';S.state='ready';S.manual=null;S.T=newT();S.seg=null;S.hold=0;
+  updateUI(); say('Fit one card inside the frame, then tap Start sweep.',4000);
+}
+function say(msg,ms){S.toast={msg:msg,until:performance.now()+(ms||1200)}}
 
+function fmtT(s){s=Math.floor(s);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2)}
 function updateUI(){
-  var nF=count(S.fronts), nB=count(S.backs), n=S.fronts.length, stepT, sub;
-  if(S.flow==='passes'){
-    if(S.phase==='fronts'){stepT='Fronts pass';sub='Card '+(n+1)+' · front';}
-    else{stepT='Backs pass';sub='Card '+(S.backs.length+1)+' of '+n+' · back';}
-  }else{
-    var k=S.step==='front'?S.fronts.length:S.backs.length;
-    stepT='Card '+(k+1);sub=S.step==='front'?'Show the front':'Now flip it over · show the back';
-  }
-  $('step').innerHTML=stepT+'<small>'+sub+'</small>';
-  $('cF').innerHTML='Fronts: <b>'+nF+'</b> captured';
-  $('cB').innerHTML='Backs: <b>'+nB+'</b> captured';
-  var onBack=(S.flow==='passes'&&S.phase==='backs')||(S.flow==='pairs'&&S.step==='back');
-  $('cF').classList.toggle('act',!onBack);$('cB').classList.toggle('act',onBack);
+  var l=list(), scanning=S.state==='scanning', man=S.state==='manual';
+  var found=count(l)+((scanning&&S.seg&&S.seg.best)?1:0), c=man?CAP:cap();
+  var title, sub;
+  if(man){title='Retake '+(S.manual.side==='fronts'?'front ':'back ')+(S.manual.idx+1);sub='Line the card up, then tap Capture';}
+  else if(S.phase==='fronts'){title='Fronts sweep';sub=scanning?'Glide slowly along the row':(l.length?'Scan another section, or finish':'Center the first card');}
+  else{title='Backs sweep';sub=scanning?'Same order as the fronts':'Start with the first card again';}
+  $('step').innerHTML=title+'<small>'+sub+'</small>';
+  $('found').innerHTML='Cards found: <b>'+found+'</b> of '+c;
   $('modeChip').textContent=S.mode==='graded'?'Slabs':'Raw';
+  $('rec').style.display=(scanning&&S.recOn)?'block':'none';
   var np=$('nextpass');
-  np.style.display=(S.flow==='passes'&&S.phase==='fronts'&&nF>0)?'block':'none';
+  np.style.display=(S.flow==='passes'&&S.phase==='fronts'&&S.state==='ready'&&count(S.fronts)>0)?'block':'none';
   var ref=$('ref');
-  if(S.flow==='passes'&&S.phase==='backs'&&S.fronts[S.backs.length]){ref.src=S.fronts[S.backs.length].url;ref.style.display='block';}
+  if(S.phase==='backs'&&!man&&S.fronts[l.length]){ref.src=S.fronts[l.length].url;ref.style.display='block';}
   else ref.style.display='none';
-  // strip of recent captures
-  var cur=onBack?S.backs:S.fronts, h='';
-  cur.slice(-6).forEach(function(x){h+=x?'<img src="'+x.url+'" alt="">':'<span>skip</span>'});
-  $('strip').innerHTML=h;
-  $('undo').disabled=!(S.fronts.length||S.backs.length);
-  $('review').textContent='Review & download ('+(nF+nB)+')';
+  var p=$('prim');
+  if(scanning){p.textContent='■ Stop';p.className='gold-btn stop';}
+  else if(man){p.textContent='Capture';p.className='gold-btn';}
+  else{p.textContent=l.length?'Start next sweep':'Start sweep';p.className='gold-btn';}
+  $('undo').textContent=man?'Cancel':'↶ Undo';
+  $('undo').disabled=!man&&(scanning||!(S.fronts.length||S.backs.length));
+  $('review').disabled=scanning||man;
+  $('review').textContent='Review ('+(count(S.fronts)+count(S.backs))+')';
   layout();
 }
 
-/* ---------- layout: frame sized to object ---------- */
+/* ---------- layout ---------- */
 function layout(){
   var vw=window.innerWidth, vh=window.innerHeight, ratio=RATIO[S.mode];
   var top=$('hud').offsetHeight, bot=vh-$('bottom').offsetTop;
-  var coachH=64, avail=vh-top-bot-coachH-6;
-  var w=Math.min(vw*0.70,(avail-6)*ratio), h=w/ratio;
+  var coachH=62, avail=vh-top-bot-coachH-6;
+  var w=Math.min(vw*WFRAC[S.mode],(avail-4)*ratio), h=w/ratio;
   var x=(vw-w)/2, y=top+4+Math.max(0,(avail-h)/2);
   rect={x:x,y:y,w:w,h:h};
   frame.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px';
@@ -266,16 +291,15 @@ function layout(){
 }
 window.addEventListener('resize',layout);window.addEventListener('orientationchange',function(){setTimeout(layout,250)});
 
-/* ---------- region mapping & analysis ---------- */
+/* ---------- analysis ---------- */
 function vidRegion(){
   var W=vid.videoWidth,H=vid.videoHeight; if(!W||!H) return null;
   var cw=window.innerWidth,ch=window.innerHeight, s=Math.max(cw/W,ch/H);
   var ox=(W*s-cw)/2, oy=(H*s-ch)/2;
   return {sx:(rect.x+ox)/s, sy:(rect.y+oy)/s, sw:rect.w/s, sh:rect.h/s};
 }
-function analyze(){
-  var r=vidRegion(); if(!r) return null;
-  var AH=Math.round(AW/ (rect.w/rect.h));
+function analyze(r){
+  var AH=Math.round(AW/(rect.w/rect.h));
   ac.width=AW; ac.height=AH;
   actx.drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,AW,AH);
   var d=actx.getImageData(0,0,AW,AH).data, n=AW*AH, g=new Uint8Array(n), i, sum=0, blown=0, dark=0;
@@ -292,200 +316,354 @@ function analyze(){
     if(Math.abs(gx)+Math.abs(gy)>40) edges++;
   }
   var mean=lapSum/cnt, lapVar=lapSq/cnt-mean*mean;
-  var motion=0,dif=0;
-  if(S.prev&&S.prev.length===n){ for(i=0;i<n;i++) motion+=Math.abs(g[i]-S.prev[i]); motion/=n; }
-  else motion=99;
-  if(S.capGray&&S.capGray.length===n){ for(i=0;i<n;i++) dif+=Math.abs(g[i]-S.capGray[i]); dif/=n; } else dif=99;
-  S.prev=g;
-  return {sharp:lapVar, glare:blown/n, shadow:dark/n, bright:sum/n, motion:motion, edge:edges/cnt, diff:dif, gray:g};
+  return {sharp:lapVar, glare:blown/n, shadow:dark/n, bright:sum/n, edge:edges/cnt, gray:g, AH:AH};
 }
-// Smooth slow metrics, keep motion raw
-function smooth(m){
-  if(!S.m||S.m.motion===99){S.m=m;return m;}
-  var a=.5,o=S.m,k=['sharp','glare','shadow','bright','edge'];
-  k.forEach(function(q){m[q]=o[q]*(1-a)+m[q]*a});
-  S.m=m;return m;
+
+/* ---------- motion tracking (how far the cards have slid through the frame) ---------- */
+var TR=21, TP=3, sads=new Float32Array((2*TR+1)*(2*TR+1));
+function track(g,AH,dt){
+  var T=S.T, W=AW;
+  if(!T.key||T.keyH!==AH){T.key=g.slice();T.keyH=AH;T.kx=T.px;T.ky=T.py;T.vel=0;return;}
+  var x0=Math.round(W*.28),x1=Math.round(W*.72),y0=Math.round(AH*.28),y1=Math.round(AH*.72);
+  var ox,oy,x,y,s,n,best=1e9,bx=0,by=0,k=0,key=T.key,rk,rc,side=2*TR+1;
+  for(oy=-TR;oy<=TR;oy++)for(ox=-TR;ox<=TR;ox++){
+    s=0;n=0;
+    for(y=y0;y<y1;y+=TP){rk=y*W;rc=(y+oy)*W+ox;for(x=x0;x<x1;x+=TP){s+=Math.abs(key[rk+x]-g[rc+x]);n++}}
+    s/=n;sads[k++]=s;if(s<best){best=s;bx=ox;by=oy}
+  }
+  var second=1e9;
+  for(oy=-TR;oy<=TR;oy++)for(ox=-TR;ox<=TR;ox++){
+    if(Math.abs(ox-bx)<=2&&Math.abs(oy-by)<=2) continue;
+    s=sads[(oy+TR)*side+(ox+TR)]; if(s<second) second=s;
+  }
+  var ok=(second-best>1.2&&second>best*1.2), lost=(Math.abs(bx)>=TR-1||Math.abs(by)>=TR-1);
+  T.ok=ok; T.lost=false;
+  if(lost){ // sweeping faster than I can follow
+    T.lost=true;T.key=g.slice();T.kx=T.px;T.ky=T.py;T.vel=3;T.bad=0;return;
+  }
+  if(ok){
+    T.bad=0; T.px=T.kx+bx; T.py=T.ky+by;
+    if(Math.max(Math.abs(bx),Math.abs(by))>=8){T.key=g.slice();T.kx=T.px;T.ky=T.py}
+    var v=Math.hypot((T.px-T.ppx)/W,(T.py-T.ppy)/AH)/Math.max(.05,dt);
+    T.vel=T.vel*.5+v*.5;
+  }else{
+    T.bad++; T.vel*=.7;
+    if(T.bad>=6){T.key=g.slice();T.kx=T.px;T.ky=T.py;T.bad=0}
+  }
+  T.ppx=T.px;T.ppy=T.py;
+  var dist=Math.hypot((T.px-T.lx)/W,(T.py-T.ly)/AH);
+  if(dist>=0.025){T.L+=dist;T.lx=T.px;T.ly=T.py}
 }
+
+/* relaxed thresholds (v0.4): only red blocks a capture */
 function judge(m){
-  var red=[],yel=[],msg=null,level='green';
-  if(m.edge<0.02){return {level:'red',msg:'Line the card up inside the frame'};}
-  if(m.bright<55){red.push('Too dark. Add light, with the lamp off to the side')}
-  else if(m.bright<85){yel.push('A little dark. Add some light from the side')}
-  if(m.bright>225){red.push('Too bright. Soften the light')}
-  if(m.glare>0.12){red.push('Heavy glare. Tilt the card a little, or move the light')}
-  else if(m.glare>0.04){yel.push('Tilt a little to cut the glare')}
-  if(m.shadow>0.55){red.push("Phone shadow. Move the light to the side")}
-  else if(m.shadow>0.30){yel.push("Phone shadow. Move the light to the side")}
-  if(m.motion>14){red.push('Hold still')}
-  else if(m.motion>5){yel.push('Hold still')}
-  if(m.sharp<25){red.push('Blurry. Move a bit closer or back until the text is sharp')}
-  else if(m.sharp<60){yel.push('Almost sharp. Hold still, or move closer or back a little')}
+  var red=[],yel=[];
+  if(m.edge<0.012) return {level:'red',msg:'Line a card up inside the frame'};
+  if(m.bright<35) red.push('Too dark. Add light, with the lamp off to the side');
+  else if(m.bright<62) yel.push('A little dark. Add some light from the side');
+  if(m.bright>232) red.push('Too bright. Soften the light');
+  if(m.glare>0.18) red.push('Glare. Tilt the phone a little, or move the light');
+  else if(m.glare>0.07) yel.push('Tilt a little to cut the glare');
+  if(m.shadow>0.72) red.push('Phone shadow. Move the light to the side');
+  else if(m.shadow>0.45) yel.push('Phone shadow. Move the light to the side');
+  if(m.speed>1.6) red.push('Slow down a little');
+  else if(m.speed>0.95) yel.push('A touch slower');
+  if(m.sharp<15) red.push('Blurry. Slow down, or move a bit closer or back');
+  else if(m.sharp<38) yel.push('Almost sharp. Slow down a little');
   if(red.length) return {level:'red',msg:red[0]};
   if(yel.length) return {level:'yellow',msg:yel[0]};
-  return {level:'green',msg:'Looks great. Hold still…'};
+  return {level:'green',msg:'Nice and steady'};
+}
+function clamp(x){return x<0?0:x>1?1:x}
+function quality(m){
+  var qs=clamp((m.sharp-10)/70), qg=1-clamp(m.glare/0.25), qh=1-clamp(m.shadow/0.8),
+      ql=(m.bright>=70&&m.bright<=215)?1:clamp(1-Math.min(Math.abs(m.bright-70),Math.abs(m.bright-215))/60), qv=1-clamp(m.speed/2);
+  return 100*(0.35*qs+0.2*qg+0.12*qh+0.1*ql+0.23*qv);
 }
 
 /* ---------- main loop ---------- */
 var lastT=0;
-function loop(){
-  if(!$('cam').classList.contains('on')) return;
+function startLoop(){ if(S.looping) return; S.looping=true; step(); }
+function step(){
+  if(!$('cam').classList.contains('on')){S.looping=false;return;}
   var now=performance.now();
-  if(now-lastT>=110){
-    lastT=now;
-    if(vid.readyState>=2&&!S.busy&&!modalOpen()){
-      var m0=analyze();
-      if(m0){
-        var m=smooth(m0);
-        if(now<S.cool){ frame.className='idle'; }
-        else{
-          if(!S.armed){
-            if(m.motion>12||m.edge<0.02||m.diff>16){S.armed=true;}
-            else{ setFrame('idle','Swap in the next card'); S.greenSince=0; frame.querySelector('.prog i').style.width='0'; dbgShow(m); requestAnimationFrame(loop); return; }
-          }
-          var j=judge(m); S.lastStatus=j.level;
-          setFrame(j.level,j.msg);
-          if(j.level==='green'){
-            if(!S.greenSince) S.greenSince=now;
-            var p=Math.min(1,(now-S.greenSince)/HOLD_MS);
-            frame.querySelector('.prog i').style.width=(p*100)+'%';
-            if(p>=1){ S.greenSince=0; capture(); }
-          }else{ S.greenSince=0; frame.querySelector('.prog i').style.width='0'; }
-        }
-        dbgShow(m);
+  if(now-lastT>=100){
+    var dt=(now-lastT)/1000; lastT=now;
+    if(vid.readyState>=2&&!modalOpen()&&S.state!=='stopping'){
+      var r=vidRegion();
+      if(r){
+        var a=analyze(r); track(a.gray,a.AH,dt);
+        var raw={sharp:a.sharp,glare:a.glare,shadow:a.shadow,bright:a.bright,edge:a.edge,speed:S.T.vel,gray:a.gray};
+        // smooth the slow-changing numbers a little for the colour; use raw numbers to pick frames
+        var m={sharp:raw.sharp,glare:raw.glare,shadow:raw.shadow,bright:raw.bright,edge:raw.edge,speed:raw.speed};
+        if(S.m){var o=S.m,q=.6;['sharp','glare','shadow','bright','edge','speed'].forEach(function(k){m[k]=o[k]*(1-q)+raw[k]*q})}
+        S.m=m;
+        var j=judge(m), jr=judge(raw), Q=quality(raw);
+        S.lvl=j.level; frame.className=j.level;
+        coach.style.borderColor={green:'var(--g)',yellow:'var(--a)',red:'var(--r)',idle:'#bbb'}[j.level];
+        $('qbar').firstChild.style.width=Math.round(quality(m))+'%';
+        var msg=j.msg;
+        if(S.T.lost) msg='Slow down a little';
+        if(S.state==='scanning') scanTick(now,r,raw,jr,Q);
+        else if(S.state==='manual'){ manualTick(now,j); if(j.level==='green') msg='Hold still…'; }
+        else if(S.toast&&now<S.toast.until) msg=S.toast.msg; else if(j.level==='green') msg='Looks good. Tap Start sweep when ready';
+        if(S.state==='scanning'&&S.toast&&now<S.toast.until){msg=S.toast.msg;coach.style.borderColor='var(--g)'}
+        else if(S.state==='scanning'&&j.level==='green') msg='Nice and steady. Keep gliding';
+        if(coach.textContent!==msg) coach.textContent=msg;
+        dbgShow(m,Q,jr);
       }
     }
+    if(S.state==='scanning') $('tm').textContent=fmtT((now-S.t0)/1000)+' · max 3:00';
   }
-  requestAnimationFrame(loop);
+  requestAnimationFrame(step);
 }
-function setFrame(level,msg){
-  if(frame.className!==level){ frame.className=level; coach.style.borderColor={green:'var(--g)',yellow:'var(--a)',red:'var(--r)',idle:'#bbb'}[level]; }
-  var onBack=(S.flow==='passes'&&S.phase==='backs')||(S.flow==='pairs'&&S.step==='back');
-  if(level==='idle'&&msg==='Swap in the next card') msg=onBack?'Swap in the next back':'Swap in the next card';
-  if(coach.textContent!==msg) coach.textContent=msg;
-}
-function dbgShow(m){
+function modalOpen(){return $('mod').classList.contains('on')}
+function dbgShow(m,Q,jr){
   if(!S.dbg) return;
-  $('dbg').textContent='sharp '+m.sharp.toFixed(1)+'\nglare '+(m.glare*100).toFixed(1)+'%\nshadow '+(m.shadow*100).toFixed(1)+'%\nlight '+m.bright.toFixed(0)+'\nmove '+(m.motion>90?'-':m.motion.toFixed(1))+'\nedges '+(m.edge*100).toFixed(1)+'%';
+  var T=S.T;
+  $('dbg').textContent='sharp '+m.sharp.toFixed(1)+'\nglare '+(m.glare*100).toFixed(1)+'%\nshadow '+(m.shadow*100).toFixed(1)+'%\nlight '+m.bright.toFixed(0)+'\nspeed '+m.speed.toFixed(2)+' w/s\nedges '+(m.edge*100).toFixed(1)+'%\nscore '+Q.toFixed(0)+' '+jr.level+'\ntrack '+(T.lost?'lost':T.ok?'ok':'weak')+'\nslide '+(T.L/P).toFixed(2)+' cards'+(S.seg?'\nseg '+S.seg.k:'');
 }
-function modalOpen(){return $('flipModal').classList.contains('on')||$('flash').classList.contains('on')}
 
-/* ---------- capture ---------- */
-var oc=document.createElement('canvas');
-function capture(manual){
-  if(S.busy) return;
-  var r=vidRegion(); if(!r) return;
-  S.busy=true;
-  var scale=Math.min(1,900/r.sw); oc.width=Math.round(r.sw*scale); oc.height=Math.round(r.sh*scale);
-  oc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,oc.width,oc.height);
-  var gray=S.prev?S.prev.slice():null;
-  oc.toBlob(function(b){
-    S.busy=false;
-    if(!b){coach.textContent="That didn't save. Please try again.";return;}
-    var item={blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height};
-    S.capGray=gray; S.armed=false;
-    push(item,false);
-    feedback();
-  },'image/jpeg',0.86);
-}
-function push(item,isSkip){
-  var msg;
-  if(S.flow==='passes'){
-    if(S.phase==='fronts'){ S.fronts.push(item); msg=isSkip?'Skipped. Next card, please':'Next card, please'; }
-    else{
-      S.backs.push(item);
-      if(S.backs.length>=S.fronts.length){ updateUI(); return finishBacks(); }
-      msg=isSkip?'Skipped. Next back, please':'Next back, please';
-    }
-  }else{
-    if(S.step==='front'){ S.fronts.push(item); S.step='back'; msg=isSkip?'Skipped. Show the back':'Now flip it over'; }
-    else{ S.backs.push(item); S.step='front'; msg='Card done. Next card, please'; }
+/* ---------- row sweep: best frame per card ---------- */
+function newSeg(k){return {k:k,best:null,score:0,level:'red',canvas:null,gray:null}}
+function scanTick(now,r,raw,jr,Q){
+  var T=S.T, sg=S.seg;
+  if(now-S.t0>MAX_SEC*1000){ stopScan('time'); return; }
+  // weak tracking: fall back to "did the picture change a lot after the best frame?"
+  if(!T.ok&&!T.lost&&sg.gray&&T.bad>=3){
+    var df=0,i,g=raw.gray,b=sg.gray;for(i=0;i<g.length;i+=3)df+=Math.abs(g[i]-b[i]);df/=g.length/3;
+    if(df>30) T.L=Math.max(T.L,(sg.k+0.5)*P+0.001);
   }
-  updateUI();
-  if(!isSkip) flash(msg);
-  else {S.armed=true;coach.textContent=msg;}
+  // card boundary crossed -> close this card's segment
+  var kNow=Math.floor(T.L/P+0.5), guard=0;
+  while(sg.k<kNow&&S.state==='scanning'&&guard++<4){
+    commitSeg(sg); 
+    if(finishedCheck()) return;
+    sg=S.seg=newSeg(sg.k+1);
+    if(kNow>sg.k&&!sg.best){}  // fast jump: the loop will close skipped ones as missed
+  }
+  var frac=T.L/P-sg.k;                    // -.5 .. .5 around the card centre
+  if(jr.level!=='red'){
+    var center=1-clamp(Math.abs(frac)*2)*0.6;
+    var sc=Q*center*(jr.level==='yellow'?0.85:1);
+    if(sc>sg.score){
+      var sgc=sg.canvas||(sg.canvas=document.createElement('canvas')), s=Math.min(1,1100/r.sw);
+      sgc.width=Math.round(r.sw*s);sgc.height=Math.round(r.sh*s);
+      sgc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,sgc.width,sgc.height);
+      sg.best=true;sg.score=sc;sg.level=jr.level;sg.gray=raw.gray.slice();
+      var l=list(); $('found').innerHTML='Cards found: <b>'+(count(l)+1)+'</b> of '+cap();
+    }
+  }
+  // 30th (or last expected) card: stop once we are past its middle
+  if(list().length>=cap()-1&&sg.best&&frac>0.2){ commitSeg(sg); S.seg=newSeg(sg.k+1); finishedCheck(true); }
 }
-function flash(msg){
-  $('flashMsg').textContent=msg; $('flash').classList.add('on');
-  S.cool=performance.now()+1500;
-  setTimeout(function(){$('flash').classList.remove('on')},1100);
+function commitSeg(sg){
+  var l=list();
+  if(l.length>=cap()) return;
+  if(!sg.best){ l.push(null); say('Missed one. Try a bit slower',1500); updateUI(); return; }
+  var item={blob:null,url:null,w:sg.canvas.width,h:sg.canvas.height,conf:(sg.level==='yellow'||sg.score<35)?'review':'ok',score:Math.round(sg.score),sec:S.sec[S.phase]};
+  l.push(item); S.pend++;
+  sg.canvas.toBlob(function(b){ S.pend--; if(b){item.blob=b;item.url=URL.createObjectURL(b);} refreshThumb(); },'image/jpeg',0.86);
+  S.found=l.length; say('Card '+l.length+' ✓',900); feedback(); pulse(); updateUI();
 }
-function feedback(){ try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){} ding(); }
-var actxA=null;
-function ding(silent){
+function pulse(){var f=$('found');f.classList.add('pulse');setTimeout(function(){f.classList.remove('pulse')},350)}
+function finishedCheck(force){
+  if(list().length>=cap()){ stopScan(S.phase==='backs'?'backsdone':'limit'); return true; }
+  return false;
+}
+function refreshThumb(){ /* thumbnails are built when the review opens */ }
+
+/* ---------- recording ---------- */
+function pickMime(){
+  if(!CAN_REC) return null;
+  var c=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(var i=0;i<c.length;i++){ try{ if(MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
+  return '';
+}
+function startRec(){
+  S.recOn=false; S.recWait=null;
+  if(!CAN_REC||!S.stream) return;
   try{
-    actxA=actxA||new (window.AudioContext||window.webkitAudioContext)();
-    if(actxA.state==='suspended') actxA.resume();
-    if(silent) return;
+    var mime=pickMime(), opt={videoBitsPerSecond:3500000}; if(mime) opt.mimeType=mime;
+    var chunks=[], rec=new MediaRecorder(S.stream,opt);
+    rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data) };
+    var phase=S.phase, sec=S.sec[S.phase];
+    S.recWait=new Promise(function(res){
+      rec.onstop=function(){
+        var type=rec.mimeType||mime||'video/webm', ext=/mp4/.test(type)?'mp4':'webm';
+        if(chunks.length){
+          var b=new Blob(chunks,{type:type.split(';')[0]});
+          S.videos.push({blob:b,url:URL.createObjectURL(b),name:phase+'-sweep-'+sec+'.'+ext,phase:phase,sec:sec,size:b.size});
+        }
+        res();
+      };
+      rec.onerror=function(){res()};
+    });
+    rec.start(1000); S.rec=rec; S.recOn=true;
+  }catch(e){ S.recOn=false; S.rec=null; S.recWait=null; }
+}
+function stopRec(){
+  var w=S.recWait;
+  try{ if(S.rec&&S.rec.state!=='inactive') S.rec.stop(); else w=null; }catch(e){w=null}
+  S.rec=null; S.recOn=false;
+  return w||Promise.resolve();
+}
+
+/* ---------- start / stop ---------- */
+function startScan(){
+  if(S.state!=='ready'||!vid.videoWidth) return;
+  if(list().length>=cap()){ showModal('That is the limit','You have '+list().length+' cards in this scan. Review and download, then start a new scan.',[['Review & download','gold',openReview]]); return; }
+  S.sec[S.phase]++; S.state='scanning'; S.t0=performance.now(); S.T=newT(); S.seg=newSeg(0); S.m=null; S.toast=null;
+  startRec(); ding(true); updateUI(); say('Go! Glide slowly along the row',1800);
+}
+async function stopScan(reason){
+  if(S.state!=='scanning') return;
+  S.state='stopping';
+  var sg=S.seg;
+  if(sg&&sg.best) commitSeg(sg);
+  S.seg=null;
+  await stopRec();
+  await new Promise(function(res){(function w(){S.pend>0?setTimeout(w,40):res()})()});
+  S.state='ready'; S.T=newT(); updateUI(); feedback();
+  stopModal(reason);
+}
+function stopModal(reason){
+  var l=list(), n=count(l), miss=l.length-n, c=cap(), v=S.videos.length&&S.videos[S.videos.length-1].phase===S.phase?S.videos[S.videos.length-1]:null;
+  var vt=v?(' Video saved ('+(v.size/1048576).toFixed(1)+' MB).'):(CAN_REC?' (No video was saved this time.)':" Video saving isn't supported on this browser.");
+  var t='Sweep done', p=n+' of '+c+' cards found'+(miss?' · '+miss+' missed':'')+'.'+vt, b=[];
+  if(reason==='limit') p+=' That is the 30-card limit for one scan.';
+  if(reason==='time') p+=' I stopped at 3 minutes to keep the video small.';
+  var full=l.length>=c;
+  if(S.phase==='backs'){
+    if(full){t='All backs captured';p=n+' backs matched to '+S.fronts.length+' fronts.'+vt;b.push(['Review & download','gold',openReview]);}
+    else{b.push(['Scan another section','gold',closeModal]);b.push(['Review & download','ghost',openReview]);}
+  }else{
+    if(S.flow==='passes'&&n>0) b.push(['Done with fronts → scan backs','gold',toBacks]);
+    else b.push(['Review & download','gold',openReview]);
+    if(!full) b.push(['Scan another section','ghost',closeModal]);
+    if(S.flow==='passes'&&n>0) b.push(['Review & download','ghost',openReview]);
+  }
+  showModal(t,p,b);
+}
+function showModal(t,p,btns){
+  $('modT').textContent=t;$('modP').textContent=p;var h=$('modB');h.innerHTML='';
+  btns.forEach(function(x){var e=document.createElement('button');e.className=x[1]==='gold'?'gold-btn':'ghost-btn';e.textContent=x[0];e.onclick=x[2];h.appendChild(e)});
+  $('mod').classList.add('on');
+}
+function closeModal(){$('mod').classList.remove('on');updateUI();}
+function toBacks(){
+  S.phase='backs'; S.T=newT();
+  showModal('Now flip the cards','Flip each card over, keep the same order, and start again at the first card. I stop after '+S.fronts.length+' backs.',[['Ready','gold',closeModal]]);
+  updateUI();
+}
+
+/* ---------- manual capture (retake / missed one) ---------- */
+function startManual(side,idx){
+  S.manual={side:side,idx:idx}; S.state='manual'; S.hold=0; S.T=newT();
+  $('viewer').classList.remove('on'); show('cam'); updateUI(); layout(); startLoop();
+}
+function manualTick(now,j){
+  var p=frame.querySelector('.prog i'), ok=j.level==='green'&&S.T.vel<0.3;
+  if(ok){ if(!S.hold) S.hold=now; var f=Math.min(1,(now-S.hold)/HOLD_MS); p.style.width=(f*100)+'%'; if(f>=1){S.hold=0;manualGrab();} }
+  else{S.hold=0;p.style.width='0'}
+}
+function grab(cb){
+  var r=vidRegion(); if(!r) return;
+  var oc=document.createElement('canvas'), s=Math.min(1,1100/r.sw); oc.width=Math.round(r.sw*s); oc.height=Math.round(r.sh*s);
+  oc.getContext('2d').drawImage(vid,r.sx,r.sy,r.sw,r.sh,0,0,oc.width,oc.height);
+  oc.toBlob(function(b){ if(b) cb({blob:b,url:URL.createObjectURL(b),w:oc.width,h:oc.height,conf:'ok',score:0,sec:0,manual:true}); },'image/jpeg',0.9);
+}
+function manualGrab(){
+  if(S.state!=='manual'||!S.manual) return; var mm=S.manual; S.state='ready'; S.hold=0;
+  grab(function(item){
+    var l=list(mm.side), old=l[mm.idx]; if(old&&old.url) setTimeout(function(){URL.revokeObjectURL(old.url)},3000);
+    l[mm.idx]=item; S.manual=null; feedback(); updateUI(); openReview();
+  });
+}
+frame.querySelector('.prog').style.opacity=0;
+var progObs=setInterval(function(){frame.querySelector('.prog').style.opacity=(S.state==='manual')?1:0},200);
+
+/* ---------- buttons ---------- */
+$('prim').addEventListener('click',function(){
+  if(S.state==='scanning') stopScan('manual');
+  else if(S.state==='manual') manualGrab();
+  else if(S.state==='ready'&&!modalOpen()) startScan();
+});
+$('undo').addEventListener('click',function(){
+  if(S.state==='manual'){S.manual=null;S.state='ready';updateUI();openReview();return;}
+  if(S.state!=='ready') return;
+  var l=list(), x=l.pop();
+  if(!x&&S.phase==='backs'&&!S.backs.length){ S.phase='fronts'; }
+  if(x&&x.url) setTimeout(function(){URL.revokeObjectURL(x.url)},3000);
+  S.T=newT(); updateUI(); say('Undone. Scan again when ready',1800);
+});
+$('nextpass').addEventListener('click',toBacks);
+$('modeChip').addEventListener('click',function(){S.mode=S.mode==='graded'?'raw':'graded';S.T=newT();S.m=null;updateUI();});
+$('dbgChip').addEventListener('click',function(){S.dbg=!S.dbg;$('dbg').style.display=S.dbg?'block':'none';});
+$('review').addEventListener('click',openReview);
+$('backScan').addEventListener('click',function(){show('cam');layout();startLoop();say('Center the next card, then tap Start sweep',3000);});
+function feedback(){ try{navigator.vibrate&&navigator.vibrate(40)}catch(e){} tick(); }
+var actxA=null;
+function ding(silent){ try{ actxA=actxA||new (window.AudioContext||window.webkitAudioContext)(); if(actxA.state==='suspended') actxA.resume(); }catch(e){} }
+function tick(){
+  try{
+    if(!actxA) return;
     var o=actxA.createOscillator(),g=actxA.createGain(),t=actxA.currentTime;
-    o.type='sine';o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1320,t+.09);
-    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.4);
-    o.connect(g);g.connect(actxA.destination);o.start(t);o.stop(t+.45);
+    o.type='sine';o.frequency.setValueAtTime(1100,t);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.08,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.12);
+    o.connect(g);g.connect(actxA.destination);o.start(t);o.stop(t+.15);
   }catch(e){}
 }
 
-/* ---------- buttons ---------- */
-$('snap').addEventListener('click',function(){ if(!modalOpen()) { S.armed=true; capture(true);} });
-$('skip').addEventListener('click',function(){
-  if(modalOpen()) return;
-  push(null,true); // keeps the order so backs still match fronts
-});
-$('undo').addEventListener('click',function(){
-  var x;
-  if(S.flow==='passes'){
-    if(S.phase==='backs'&&S.backs.length){x=S.backs.pop();}
-    else if(S.phase==='backs'){S.phase='fronts';}
-    else x=S.fronts.pop();
-  }else{
-    if(S.step==='back'){x=S.fronts.pop();S.step='front';}
-    else if(S.backs.length){x=S.backs.pop();S.step='back';}
-  }
-  if(x) setTimeout(function(){URL.revokeObjectURL(x.url)},3000);
-  S.armed=true;S.greenSince=0;S.cool=performance.now()+400;
-  updateUI(); coach.textContent='Undone. Scan again when ready';
-});
-$('nextpass').addEventListener('click',function(){
-  S.phase='backs'; S.armed=true; S.capGray=null;
-  $('flipT').textContent='Now flip the stack';
-  $('flipP').textContent='Scan the backs in the same order, starting with the first card.';
-  $('flipOk').textContent='Ready';
-  $('flipModal').classList.add('on'); S.modalMode='flip';
-  updateUI();
-});
-function finishBacks(){
-  $('flipT').textContent='All backs captured';
-  $('flipP').textContent='Nice work. '+count(S.fronts)+' fronts and '+count(S.backs)+' backs. Review and download when you are ready.';
-  $('flipOk').textContent='Review & download';
-  S.modalMode='done'; $('flipModal').classList.add('on'); feedback();
-}
-$('flipOk').addEventListener('click',function(){
-  $('flipModal').classList.remove('on');
-  if(S.modalMode==='done') openReview(); else {S.cool=performance.now()+300;}
-});
-$('modeChip').addEventListener('click',function(){S.mode=S.mode==='graded'?'raw':'graded';S.greenSince=0;S.prev=null;updateUI();});
-$('dbgChip').addEventListener('click',function(){S.dbg=!S.dbg;$('dbg').style.display=S.dbg?'block':'none';});
-$('review').addEventListener('click',openReview);
-$('backScan').addEventListener('click',function(){show('cam');layout();loop();});
-
-/* ---------- review & download ---------- */
+/* ---------- review ---------- */
 function pad(n){return ('000'+n).slice(-3)}
 function names(i,side){return 'card-'+pad(i+1)+'-'+side+'.jpg'}
 function openReview(){
-  var h='',n=Math.max(S.fronts.length,S.backs.length),i;
-  for(i=0;i<S.fronts.length;i++){
-    h+=S.fronts[i]?'<a href="'+S.fronts[i].url+'" download="'+names(i,'front')+'"><img src="'+S.fronts[i].url+'" alt=""><em>Front '+(i+1)+' · tap to save</em></a>':'<a class="skp"><span>Front '+(i+1)+' skipped</span></a>';
-  }
-  for(i=0;i<S.backs.length;i++){
-    h+=S.backs[i]?'<a href="'+S.backs[i].url+'" download="'+names(i,'back')+'"><img src="'+S.backs[i].url+'" alt=""><em>Back '+(i+1)+' · tap to save</em></a>':'<a class="skp"><span>Back '+(i+1)+' skipped</span></a>';
-  }
-  $('grid').innerHTML=h||'<p style="grid-column:1/4">Nothing captured yet.</p>';
-  $('revP').textContent='Fronts: '+count(S.fronts)+' · Backs: '+count(S.backs)+'. Backs are matched to fronts by order. Photos stay on this phone.';
+  $('mod').classList.remove('on');
+  var h='';
+  [['fronts','Fronts'],['backs','Backs']].forEach(function(pr){
+    var l=S[pr[0]]; if(!l.length) return;
+    h+='<h3>'+pr[1]+' · '+count(l)+' of '+l.length+'</h3>';
+    l.forEach(function(x,i){
+      if(!x) h+='<button class="t ms" data-s="'+pr[0]+'" data-i="'+i+'">'+pr[1].slice(0,-1)+' '+(i+1)+'<br>missed<br>tap to fix</button>';
+      else h+='<button class="t'+(x.conf==='review'?' rv':'')+'" data-s="'+pr[0]+'" data-i="'+i+'"><img src="'+x.url+'" alt=""><em>'+pr[1].slice(0,-1)+' '+(i+1)+'</em>'+(x.conf==='review'?'<b>check</b>':'')+'</button>';
+    });
+  });
+  $('grid').innerHTML=h||'<p style="grid-column:1/4;color:#a79d86">Nothing captured yet.</p>';
+  var fl=S.fronts.length,bl=S.backs.length;
+  $('revP').textContent='Fronts: '+count(S.fronts)+' · Backs: '+count(S.backs)+'. Tap a photo to remove or retake it. "Check" photos were a bit less clear. Backs match fronts by order.';
   $('dlZip').disabled=!(count(S.fronts)+count(S.backs));
+  var v='';
+  S.videos.forEach(function(x,i){v+='<a class="ghost-btn" style="display:block;text-align:center;text-decoration:none;line-height:26px;font-size:14px" href="'+x.url+'" download="'+x.name+'">Video · '+x.name+' · '+(x.size/1048576).toFixed(1)+' MB</a>'});
+  if(!S.videos.length) v='<p style="margin:0;color:#a79d86;font-size:13px">'+(CAN_REC?'No video was recorded yet.':"Video saving isn't supported on this browser, so only photos are saved.")+'</p>';
+  $('vids').innerHTML=v;
+  $('addMan').style.display=(list().length<cap())?'block':'none';
   show('rev');
 }
+$('grid').addEventListener('click',function(e){
+  var t=e.target.closest('.t'); if(!t) return;
+  var side=t.dataset.s,i=+t.dataset.i,x=S[side][i],lab=(side==='fronts'?'Front ':'Back ')+(i+1);
+  $('vT').textContent=lab+(x&&x.conf==='review'?' · a bit less clear':'');
+  var im=$('vImg'); if(x){im.src=x.url;im.style.display='block'}else{im.style.display='none'}
+  var b=$('vB'); b.innerHTML='';
+  function add(txt,cls,fn){var e2=document.createElement('button');e2.className=cls;e2.textContent=txt;e2.onclick=fn;b.appendChild(e2)}
+  add(x?'Retake this one':'Capture this one','gold-btn',function(){startManual(side,i)});
+  add(x?'Remove (false detection)':'Remove this empty slot','ghost-btn',function(){
+    var l=S[side].splice(i,1)[0]; if(l&&l.url) setTimeout(function(){URL.revokeObjectURL(l.url)},3000);
+    $('viewer').classList.remove('on'); openReview(); updateUI();
+  });
+  add('Keep','ghost-btn',function(){$('viewer').classList.remove('on')});
+  $('viewer').classList.add('on');
+});
+$('addMan').addEventListener('click',function(){
+  var l=list(); if(l.length>=cap()) return;
+  l.push(null); startManual(S.phase,l.length-1);
+});
 $('startOver').addEventListener('click',function(){
-  if(!confirm('Start over? This clears all captures from this page.')) return;
-  S.fronts.concat(S.backs).forEach(function(x){x&&URL.revokeObjectURL(x.url)});
-  newSession(); show('cam'); layout(); loop();
+  if(!confirm('Start over? This clears all photos and videos from this page.')) return;
+  S.fronts.concat(S.backs).forEach(function(x){x&&x.url&&URL.revokeObjectURL(x.url)});
+  S.videos.forEach(function(x){URL.revokeObjectURL(x.url)});
+  newSession(); show('cam'); layout(); startLoop();
 });
 // minimal store-only zip
 var CRC=(function(){var t=[],c,n,k;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -508,19 +686,21 @@ async function makeZip(files){
 $('dlZip').addEventListener('click',async function(){
   var btn=$('dlZip'),old=btn.textContent;btn.textContent='Packing…';btn.disabled=true;
   try{
-    var files=[],man='Moose Cards Guided Scan v0.3\nMode: '+S.mode+'\nFlow: '+S.flow+'\nBacks match fronts by order.\n';
+    var files=[],man='Moose Cards Guided Scan v0.4 (row video scan)\nGuide: '+S.mode+'\nFlow: '+S.flow+'\nBacks match fronts by order.\n"review" = a less clear photo, worth a look.\n';
     var n=Math.max(S.fronts.length,S.backs.length);
     for(var i=0;i<n;i++){
       var f=S.fronts[i],b=S.backs[i];
-      if(f) files.push({name:names(i,'front'),blob:f.blob});
-      if(b) files.push({name:names(i,'back'),blob:b.blob});
-      man+='card '+pad(i+1)+': front '+(f?'yes':'skipped/none')+', back '+(b?'yes':'skipped/none')+'\n';
+      if(f&&f.blob) files.push({name:names(i,'front'),blob:f.blob});
+      if(b&&b.blob) files.push({name:names(i,'back'),blob:b.blob});
+      man+='card '+pad(i+1)+': front '+(f?f.conf+(f.manual?' (manual)':''):'missed')+', back '+(b?b.conf+(b.manual?' (manual)':''):(S.backs.length?'missed':'none'))+'\n';
     }
+    S.videos.forEach(function(v){man+='video: '+v.name+' (not in this zip; download it separately)\n'});
     files.push({name:'manifest.txt',blob:new Blob([man],{type:'text/plain'})});
     var z=await makeZip(files),u=URL.createObjectURL(z),a=document.createElement('a');
+    S.lastZip=z.size;
     a.href=u;a.download='moose-cards-scan.zip';document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(u)},60000);
-  }catch(e){ $('revP').textContent="The zip didn't build. You can still tap each photo to save it."; }
+  }catch(e){ $('revP').textContent="The zip didn't build. Tap a photo to open it, or try again."; }
   btn.textContent=old;btn.disabled=false;
 });
 document.addEventListener('visibilitychange',function(){
