@@ -1,9 +1,9 @@
-/* Collectors Desk v0.10.4 - offline cache. The app and the reader (about 11 MB of bundled reader files) are kept on this device after the first visit,
+/* Collectors Desk v0.11 - offline cache. The app and the reader (about 11 MB of bundled reader files) are kept on this device after the first visit,
    so reading cards works with no connection. Nothing is sent anywhere. Pages and scripts are fetched fresh when online, and the saved copy is used when offline. */
 'use strict';
-var VER='0.10.4', CACHE='collectors-desk-'+VER, BIGRE=/\/ocr\/|card-reader|ocr-players/;
-var CORE=['./','index.html','binder.css?v='+VER,'binder.js?v='+VER,'listing.js?v='+VER,'reader-adapter.js?v='+VER,'card-reader.js?v='+VER,'card-reader-worker.js?v='+VER,
- 'ocr-dict.js?v=0.10','ocr-parse.js?v=0.10','ocr.js?v=0.10','ocr-digits.js?v=0.10','ocr-serial.js?v=0.10','ocr-text.js?v=0.10','ocr-guess.js?v=0.10','ocr-read.js?v=0.10','cleanup.js?v=0.10','ocr-players.js?v='+VER,'ocr-auto.js?v='+VER];
+var VER='0.11', RVER='0.10.4', CACHE='collectors-desk-'+VER, BIGRE=/\/ocr\/|card-reader|ocr-players/;
+var CORE=['./','index.html','binder.css?v='+VER,'binder.js?v='+VER,'listing.js?v='+VER,'reader-adapter.js?v='+RVER,'card-reader.js?v='+RVER,'card-reader-worker.js?v='+RVER,'ebay-cam.js?v='+VER,
+ 'ocr-dict.js?v=0.10','ocr-parse.js?v=0.10','ocr.js?v=0.10','ocr-digits.js?v=0.10','ocr-serial.js?v=0.10','ocr-text.js?v=0.10','ocr-guess.js?v=0.10','ocr-read.js?v=0.10','cleanup.js?v='+VER,'ocr-players.js?v='+RVER,'ocr-auto.js?v='+RVER];
 var OCR=['ocr/tesseract.min.js','ocr/worker.min.js','ocr/eng.traineddata.gz'];
 self.addEventListener('install',function(e){ e.waitUntil(caches.open(CACHE).then(function(c){ return Promise.all(CORE.map(function(u){ return c.add(u).catch(function(){}); })); }).then(function(){ return self.skipWaiting(); })); });
 self.addEventListener('activate',function(e){ e.waitUntil(caches.keys().then(function(ks){ return Promise.all(ks.filter(function(k){ return k.indexOf('collectors-desk-')===0&&k!==CACHE; }).map(function(k){ return caches.delete(k); })); }).then(function(){ return self.clients.claim(); })); });

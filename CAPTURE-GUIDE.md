@@ -193,3 +193,15 @@ You're doing great. Every card you scan is one less to wonder about.
 ## One-line test script (v0.7)
 
 > Open the page, tap Scan tab then Start a scan, sweep a few cards, tap Name your cards and name two (Skip one), open All cards and change Sort to Team, tap a card, add a note and one of your own photos, make a binder from the card screen, then Backup tab then Export my Binder.
+
+## eBay photos (v0.11)
+
+Start it from **Home → 📸 Take eBay photos** for a new card, or from a card's page or its **Listing sheet** to attach the photos to that card.
+
+1. **Front, then Back** (both needed). Lay the card face up inside the gold frame. Use **Raw card** or **Graded slab** to match the outline. Use **Sideways card** for landscape cards.
+2. The pills turn **green / yellow / red**, each with words: fills frame, straight, sharp, glare, even light, brightness. When the card is green and steady for about half a second, it takes the photo by itself (**Auto: on**). The round button always works.
+3. **Close-ups are optional**: 4 corners, serial number, autograph, flaw. Tap **Skip** to pass on one.
+4. **Results**: photos in eBay order, with the first one as the main photo. Drag ⠿ or use ‹ › to reorder. Retake or ✕ any photo. Pick a **Dark gray** or **White** background. Colors are **Original (true color)** by default. "Light touch-up" is optional, never hides wear, and "Original" is always one tap away.
+5. **⬇ Save all to my phone** opens the share sheet. Pick "Save images" there. If the share sheet isn't available, the files download instead. Files are JPEG, 1600 px or more tall, named like `player-year-set-front.jpg`.
+
+Tips: soft side light from a window, a plain dark matte surface, phone flat over the card, and tilt slightly to move glare off sleeves or slabs. The phone light starts off because it causes glare. Everything stays on this phone.

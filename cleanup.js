@@ -188,5 +188,5 @@ async function cleanBlob(blob,mode,onlyLight){
 }
 function describe(r){ return 'Cleaned scan, card unchanged'; }
 function noteText(notes){ return 'Done on this phone: '+notes.join(', ')+'. Scratches, creases, dents, edge and corner wear, and the card\u2019s own centering were not touched.'; }
-window.Cleanup={cleanBlob:cleanBlob,describe:describe,noteText:noteText,_internals:{analyse:analyse,findQuad:findQuad}};
+window.Cleanup={cleanBlob:cleanBlob,describe:describe,noteText:noteText,_internals:{analyse:analyse,findQuad:findQuad,warp:warp,enhance:enhance}};
 })();

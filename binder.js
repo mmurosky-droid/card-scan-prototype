@@ -1,4 +1,4 @@
-/* Collectors Desk v0.10.4 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
+/* Collectors Desk v0.11 (Mr. Moose Enterprises, LLC) - Binder (all data stays on this phone, in IndexedDB) */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -300,6 +300,7 @@ function renderHomeTab(){
     h+='<div class="hero0"><div class="ring"><svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="12" y="6" width="34" height="48" rx="4" transform="rotate(-8 29 30)"/><rect x="20" y="10" width="34" height="48" rx="4"/><path d="M30 34l6 6 10-12" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
       '<h2>Your cards, beautifully kept.</h2><p>Scan a row of cards with your phone. Collectors Desk finds each one, reads it, and files it in a private binder on this device.</p>'+
       '<button class="gold-btn bigscan" data-act="scan">Scan your first cards</button>'+
+      '<button class="ghost-btn ebgo" data-act="ebay">📸 Take eBay photos of one card<small>Front, back and close-ups, ready to post</small></button>'+
       '<ol class="how3"><li><b>1</b>Scan<small>Glide along a row</small></li><li><b>2</b>Name<small>Auto-filled, you check</small></li><li><b>3</b>Keep<small>Binder + backup</small></li></ol>'+
       '<button class="linkb" data-act="restore">Already have a backup? Restore it</button></div>';
     h+='<div class="pvnote" style="text-align:center">'+esc(HONEST)+'</div>';
@@ -313,6 +314,7 @@ function renderHomeTab(){
     h+='<button class="slide" data-act="card" data-id="'+c.id+'"><span class="ph"><img src="'+mainPhoto(c)+'" alt="'+esc(nm)+'" '+(i>2?'loading="lazy"':'')+'></span><span class="cap"><b>'+esc(nm)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span>'+(tags?'<span class="tg">'+tags+'</span>':'')+'</button>'; });
   h+='</div><button class="carb r" data-act="carr" aria-label="Next">\u203a</button></div>';
   h+='<button class="gold-btn bigscan" data-act="scan">Scan cards</button>';
+  h+='<button class="ghost-btn ebgo" data-act="ebay">📸 Take eBay photos<small>One card: front, back and close-ups, ready to post</small></button>';
   h+='</div><div class="hcol2">';
   var td=todoList().filter(function(x){return !(nudge&&x.id==='backup')}), nx=td[0];
   if(nx){ h+='<div class="nextc"><small>Next step</small><div class="nt">'+esc(nx.t)+'</div><p>'+esc(nx.d)+'</p><button class="ghost-btn" data-act="todo" data-id="'+nx.id+'">Start \u203a</button></div>';
@@ -342,6 +344,7 @@ function homeAct(e){
   else if(a==='gobackup') setTab('d');
   else if(a==='card'){ var ids=featuredCards().map(function(c){return c.id}); B.openCard(b.dataset.id,ids); }
   else if(a==='carl') carStep(-1); else if(a==='carr') carStep(1);
+  else if(a==='ebay') B.openEbay(null,'home');
   else if(a==='savebk') exportJSON();
   else if(a==='nudgeno'){ dismissNudge(); renderHomeTab(); }
   else if(a==='restore'){ setTab('d'); setTimeout(function(){ var f=$('impFile'); if(f) f.click(); },50); }
@@ -652,7 +655,7 @@ function drawCDPhoto(c){
   var blob=null, label='', rm=false, rs=null, cl=null;
   if(D.side==='front'){ blob=c.front||c.back; label=c.front?'Front':'Back'; rs=realSide(c); }
   else if(D.side==='back'){ blob=c.back; label='Back'; if(!blob){ blob=c.front; label='Front (no back yet)'; } rs=realSide(c); }
-  else { var p=(c.photos||[]).filter(function(x){return 'p:'+x.id===D.side})[0]; if(p){ blob=p.blob; label='My photo'; rm=true; } else { D.side='front'; blob=c.front; label='Front'; rs=realSide(c); } }
+  else { var p=(c.photos||[]).filter(function(x){return 'p:'+x.id===D.side})[0]; if(p){ blob=p.blob; label=p.ebay?('eBay photo · '+ebLabel(p.ebay)):'My photo'; rm=true; } else { D.side='front'; blob=c.front; label='Front'; rs=realSide(c); } }
   cl=rs?cleanOf(c,rs):null; var showC=!!cl&&!D.orig;
   if(showC) blob=cl.blob;
   var flip=c.back&&c.front&&!rm;
@@ -660,7 +663,7 @@ function drawCDPhoto(c){
   var h='';
   h+='<button data-s="front" class="'+(D.side==='front'?'on':'')+'" style="background-image:url('+urlOf(c.front||c.back)+')"><span>Front</span></button>';
   if(c.back) h+='<button data-s="back" class="'+(D.side==='back'?'on':'')+'" style="background-image:url('+urlOf(c.back)+')"><span>Back</span></button>';
-  (c.photos||[]).forEach(function(p,i){ h+='<button data-s="p:'+p.id+'" class="'+(D.side==='p:'+p.id?'on':'')+'" style="background-image:url('+urlOf(p.thumb||p.blob)+')"><span>Mine '+(i+1)+'</span></button>'; });
+  var mi=0; (c.photos||[]).forEach(function(p){ h+='<button data-s="p:'+p.id+'" class="'+(D.side==='p:'+p.id?'on':'')+'" style="background-image:url('+urlOf(p.thumb||p.blob)+')"><span>'+(p.ebay?('eBay '+esc(ebShort(p.ebay))):('Mine '+(++mi)))+'</span></button>'; });
   h+='<button class="add" data-s="__add" aria-label="Add my photo">＋<span>My photo</span></button>';
   $('cdStrip').innerHTML=h;
   renderClean(c);
@@ -700,6 +703,40 @@ $('cdClean').addEventListener('click',function(e){
   else if(a==='rm'&&rs) MC().askDlg('Remove the cleaned version?','Your original photo stays exactly as it is. You can clean it up again any time.',[{label:'Remove cleaned version',cls:'ghost',fn:function(){ if(c.clean) delete c.clean[rs]; refreshCThumb(c).then(function(){ c.edited=true; saveCard(c); D.orig=false; if(D.id===c.id) drawCDPhoto(c); MC().toast('Cleaned version removed.'); }); }},{label:'Keep it',cls:'gold'}]);
 });
 $('cdListing').addEventListener('click',function(){ B.openListing(D.id); });
+$('cdEbay').addEventListener('click',function(){ B.openEbay(D.id,'cd'); });
+$('preEbay').addEventListener('click',function(){ B.openEbay(null,'home'); });
+/* ---------- v0.11 eBay photos ---------- */
+var EB_SHORT={front:'Front',back:'Back','corner-tl':'Corner TL','corner-tr':'Corner TR','corner-bl':'Corner BL','corner-br':'Corner BR',serial:'Serial',auto:'Auto',flaw:'Flaw'};
+function ebShort(k){ return EB_SHORT[k]||k; }
+function ebLabel(k){ var s=window.EbayCam&&EbayCam.SHOTS.filter(function(x){return x.k===k})[0]; return s?s.t:ebShort(k); }
+function ebPhotos(c){ return (c&&c.photos||[]).filter(function(p){return p.ebay}); }
+B.ebPhotos=ebPhotos;
+B.openEbay=function(id,from){
+  if(!window.EbayCam){ MC().toast('The eBay camera didn\u2019t load. Reload the page and try again.',3200,true); return; }
+  var c=id?byId(id):null, cid=c?c.id:null; flush();
+  function names(){ var x=cid&&byId(cid); return x?{player:x.player,year:x.year,set:x.brand}:{}; }
+  var ex=ebPhotos(c).map(function(p){ return {k:p.ebay,blob:p.blob,src:p.src||null}; });
+  EbayCam.open({mode:c&&c.cond==='graded'?'graded':'raw',names:names(),cardTitle:c?cardTitle(c):'',existing:ex,order:c&&c.ebayOrder,bg:c&&c.ebayBg,
+    onSave:async function(files,o){
+      var x=cid&&byId(cid), fresh=false;
+      if(!x){ x=newCard(rid('c')); normCard(x); x.cond=EbayCam._state()&&EbayCam._state().mode==='graded'?'graded':'raw'; B.cards.push(x); cid=x.id; fresh=true; }
+      var keep=(x.photos||[]).filter(function(p){return !p.ebay}), eb=[];
+      for(var i=0;i<files.length;i++){ var f=files[i]; eb.push({id:rid('p'),blob:f.blob,thumb:await thumb(f.blob,200),ebay:f.k,name:f.name,src:f.src||null}); }
+      revokeList(ebPhotos(x));
+      x.photos=keep.concat(eb); x.ebayOrder=o.order; x.ebayBg=o.bg; x.ebayTouch=!!o.touch;
+      if(fresh||x.ebNew){ x.ebNew=true; var fr=files.filter(function(f){return f.k==='front'})[0], bk=files.filter(function(f){return f.k==='back'})[0];
+        x.front=fr?fr.blob:null; x.back=bk?bk.blob:null; x.fsize=x.front?x.front.size:0; x.bsize=x.back?x.back.size:0; x.thumb=(x.front||x.back)?await thumb(x.front||x.back):null; }
+      x.edited=true; x.upd=Date.now(); await put('cards',x);
+      log('ebay photos saved '+eb.length+' to '+x.id+(fresh?' (new card)':''));
+    },
+    onClose:function(n){
+      var x=cid&&byId(cid);
+      if(x&&from==='ls'){ B.openListing(cid); return; }
+      if(x){ if(from==='cd'&&B.cdOpen&&D.id===cid){ MC().show('cd'); renderCD(); } else B.openCard(cid,[cid]); if(n&&!c) MC().toast('New card made with your eBay photos. Add its name when you\u2019re ready.',3600); return; }
+      if(typeof renderBinders==='function') renderBinders();
+    }});
+};
+function revokeList(L){ if(!urlMap) return; L.forEach(function(p){ [p.blob,p.thumb].forEach(function(b){ if(b&&urlMap.has&&urlMap.has(b)){ URL.revokeObjectURL(urlMap.get(b)); urlMap.delete(b); } }); }); }
 function closeCD(){ flush(); B.cdOpen=false; if(B.view.id&&$('bv')){ MC().show('bv'); renderBV(); } else B.goHome(); }
 $('cdBack').addEventListener('click',closeCD);
 function cdGo(d){ var j=D.i+d; if(j<0||j>=D.list.length) return; flush(); D.i=j; D.id=D.list[j]; D.side='front'; D.orig=false; renderCD(); $('cdBody').scrollTop=0; }
@@ -1172,7 +1209,7 @@ $('clnX').addEventListener('click',function(){ CL.stop=true; $('clnX').disabled=
 /* ---------- Listing sheet ---------- */
 var L={id:null};
 B.openListing=function(id){ var c=byId(id); if(!c) return; flush(); L.id=id; ensureDrafts(c); MC().show('ls'); renderLS(); $('lsBody').scrollTop=0; };
-function lsPhoto(c){ var cl=cleanOf(c,'front')||cleanOf(c,'back'); return cl&&c.cthumb?c.cthumb:(c.thumb||c.front||c.back); }
+function lsPhoto(c){ var ef=ebPhotos(c).filter(function(p){return p.ebay==='front'})[0]; if(ef) return ef.thumb||ef.blob; var cl=cleanOf(c,'front')||cleanOf(c,'back'); return cl&&c.cthumb?c.cthumb:(c.thumb||c.front||c.back); }
 function guessCount(c){ return Listing.guessed(c).length; }
 function lsChk(c){
   var n=guessCount(c), el=$('lsChk'); if(!el) return;
@@ -1182,20 +1219,31 @@ function renderLS(){
   var c=byId(L.id); if(!c){ MC().show('cd'); return; } var y=$('lsBody').scrollTop; ensureDrafts(c);
   $('lsIntro').textContent='A draft for you to review and edit. Nothing is sent anywhere, and no price is suggested. Anything marked “check this” was guessed. Tap the badge once you have checked it.';
   $('lsTop').innerHTML='<div class="lscard"><img src="'+urlOf(lsPhoto(c))+'" alt=""><div><b>'+esc(cardTitle(c))+'</b><span id="lsChk"></span>'+(hasClean(c)?'<small>Using your cleaned photos. Your originals are kept.</small>':'<small>Tip: “Clean up photo” on the card makes straighter photos for a listing.</small>')+'</div></div>'+
+    lsEbHTML(c)+
     '<button class="ghost-btn dbtn2" id="lsRead"'+(LS_BUSY?' disabled':'')+'>✨ Try reading the card for me<small>Optional. Reads the photo on this phone and suggests names, year, set, serial number and more. Anything you tap is marked “check this”.</small></button><div id="lsOcr"></div>';
   buildForm($('lsForm'),c,['sport','player','team','year','brand','number','serial','parallel','flags','cond','condNotes','flaws','flawText'],function(k){ lsSaved(); lsChk(c); });
   $('lsTextH').style.display='block';
   buildForm($('lsText'),c,['title','desc','price'],function(){ lsSaved(); });
-  $('lsAct').innerHTML='<button class="gold-btn" id="lsCopy">Copy listing text</button><div class="pvnote">Copies the title and description so you can paste them into eBay or anywhere else. Photos are not copied. Save them from the card, or use the photo zip on the Backup tab.</div>'+
+  $('lsAct').innerHTML='<button class="gold-btn" id="lsCopy">Copy listing text</button><div class="pvnote">Copies the title and description so you can paste them into eBay or anywhere else. Photos are not copied. Use \u201cSave all to my phone\u201d under eBay photos above, or the photo zip on the Backup tab.</div>'+
     '<button class="ghost-btn dbtn" id="lsCsv">Download this card’s listing (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>'+
     '<button class="ghost-btn" id="lsDone" style="width:100%">‹ Back to the card</button>';
   lsChk(c); $('lsBody').scrollTop=y;
+}
+function lsEbHTML(c){ var L=ebPhotos(c);
+  if(!L.length) return '<button class="gold-btn ebgo" id="lsEbGo">📸 Take eBay photos<small>Front, back and close-ups, straightened and cropped for your listing</small></button>';
+  return '<div class="lsEb"><div class="lab2">eBay photos ('+L.length+')</div><div class="lsEbS">'+L.map(function(p){ return '<img src="'+urlOf(p.thumb||p.blob)+'" alt="'+esc(ebLabel(p.ebay))+'" title="'+esc(p.name||'')+'">'; }).join('')+'</div>'+
+    '<div class="lsEbB"><button class="gold-btn" id="lsEbSave">⬇ Save all to my phone</button><button class="ghost-btn" id="lsEbGo">📸 Retake or add</button></div></div>'; }
+async function ebSaveAll(c){ var L=ebPhotos(c); if(!L.length) return; var fs=L.map(function(p){ return new File([p.blob],p.name||('card-'+p.ebay+'.jpg'),{type:'image/jpeg'}); });
+  if(navigator.canShare&&navigator.share){ try{ if(navigator.canShare({files:fs})){ await navigator.share({files:fs,title:'eBay photos'}); MC().toast('Shared \u2713 Pick \u201cSave images\u201d to put them in your Photos.',3200); return; } }catch(e){ if(e&&e.name==='AbortError') return; } }
+  for(var i=0;i<fs.length;i++){ deliver(fs[i],fs[i].name,false); await new Promise(function(r){setTimeout(r,450)}); }
 }
 function lsSaved(){ var el=$('lsSaved'); if(el) el.textContent='Saved ✓'; }
 $('lsBack').addEventListener('click',function(){ lsLeave(); });
 function lsLeave(){ if(LS_BUSY){ LS_BUSY.skip=true; try{ AppReader.cancel(); }catch(e){} } flush(); MC().show('cd'); renderCD(); }
 $('lsTop').addEventListener('click',async function(e){
   var c=byId(L.id); if(!c) return;
+  if(e.target.closest('#lsEbGo')){ B.openEbay(c.id,'ls'); return; }
+  if(e.target.closest('#lsEbSave')){ ebSaveAll(c); return; }
   if(e.target.closest('#lsAllOk')){ c.guess={}; c.edited=true; saveCard(c); renderLS(); return; }
   var oc=e.target.closest('[data-oc]'); if(oc){ var k=oc.dataset.oc, v=oc.dataset.v;
     if(k.indexOf('flag:')===0){ c[k.slice(5)]=true; c.guess=c.guess||{}; c.guess.flags=1; c.edited=true; saveCard(c); }
@@ -1275,7 +1323,7 @@ async function renderBackup(){
   h+='<button class="ghost-btn dbtn" data-d="lcsv">Export listing sheets (CSV)<small>Draft for review, not an official eBay file. No eBay connection.</small></button>';
   h+='<button class="ghost-btn dbtn" data-d="zip">Export photos (zip)<small>Original and cleaned photos, plus your own, named by card</small></button>';
   h+='<div class="lab">Help</div><button class="ghost-btn dbtn" data-d="info">Info / debug panel<small>For screenshots when something feels off</small></button>';
-  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.10.4 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
+  h+='<div class="pvnote">'+PHNOTE+'</div><div class="legal">Collectors Desk v0.11 \u00b7 \u00a9 Mr. Moose Enterprises, LLC. Your photos and details stay on this device.</div>';
   $('paneD').innerHTML=h;
   $('impFile').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) importFile(f); };
   refreshTabDot();
@@ -1313,12 +1361,12 @@ async function exportJSON(){
   MC().toast('Packing your backup\u2026',2500);
   try{
   flush();
-  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.10.4","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
+  var parts=['{"app":"moose-cards-binder","appName":"Collectors Desk","version":"0.11","exported":'+JSON.stringify(new Date(start).toISOString())+',"binders":'+JSON.stringify(B.binders)+',"gone":'+JSON.stringify(Object.keys(B.gone))+',"cards":['];
   for(var i=0;i<B.cards.length;i++){
     var c=B.cards[i], o={}; Object.keys(c).forEach(function(k){ if(['front','back','thumb','photos','clean','cthumb'].indexOf(k)<0) o[k]=c[k]; });
     o.front=await b2d(c.front); o.back=await b2d(c.back); o.photos=[]; o.clean={};
     for(var sd=0;sd<2;sd++){ var sn=sd?'back':'front', cl=cleanOf(c,sn); if(cl) o.clean[sn]={data:await b2d(cl.blob),notes:cl.notes,found:cl.found,msg:cl.msg,ts:cl.ts,mode:cl.mode}; }
-    for(var j=0;j<(c.photos||[]).length;j++) o.photos.push({id:c.photos[j].id,data:await b2d(c.photos[j].blob)});
+    for(var j=0;j<(c.photos||[]).length;j++){ var pj=c.photos[j], po={id:pj.id,data:await b2d(pj.blob)}; if(pj.ebay){ po.ebay=pj.ebay; po.name=pj.name||''; if(pj.src) po.src=await b2d(pj.src); } o.photos.push(po); }
     parts.push((i?',':'')+JSON.stringify(o)); if(i%5===4) await sleep(0);
   }
   parts.push(']}');
@@ -1362,7 +1410,7 @@ async function exportZip(){
     var base=bases[c.id], pn=photoNames(c,base), mine=[];
     if(c.front) files.push({name:pn.fo,blob:c.front}); if(c.back) files.push({name:pn.bo,blob:c.back});
     if(pn.fc){ files.push({name:pn.fc,blob:cleanOf(c,'front').blob}); anyC=true; } if(pn.bc){ files.push({name:pn.bc,blob:cleanOf(c,'back').blob}); anyC=true; }
-    (c.photos||[]).forEach(function(p,j){ var n=base+'-mine-'+(j+1)+'.jpg'; files.push({name:n,blob:p.blob}); mine.push(n); });
+    var mj=0; (c.photos||[]).forEach(function(p){ var n=p.ebay?(base+'-ebay-'+p.ebay+'.jpg'):(base+'-mine-'+(++mj)+'.jpg'); files.push({name:n,blob:p.blob}); mine.push(n); });
     csv.push([i+1,c.player,c.year,c.team,pn.fo,pn.fc,pn.bo,pn.bc,mine.join(' ')].map(csvEsc).join(','));
   });
   files.push({name:'cards.csv',blob:new Blob([csv.join('\n')],{type:'text/csv'})});
@@ -1389,7 +1437,7 @@ async function importFile(file){
         var o=j.cards[i]; if(!o||!o.id||have[o.id]) continue;
         var c=newCard(o.id); Object.keys(o).forEach(function(k){ if(['front','back','photos','thumb','clean','cthumb'].indexOf(k)<0) c[k]=o[k]; });
         normCard(c); c.clean={}; c.front=await d2b(o.front); c.back=await d2b(o.back); c.fsize=c.front?c.front.size:0; c.bsize=c.back?c.back.size:0;
-        c.photos=[]; for(var p=0;p<(o.photos||[]).length;p++){ var bl=await d2b(o.photos[p].data); if(bl) c.photos.push({id:o.photos[p].id,blob:bl,thumb:await thumb(bl,200)}); }
+        c.photos=[]; for(var p=0;p<(o.photos||[]).length;p++){ var bl=await d2b(o.photos[p].data); if(bl){ var np={id:o.photos[p].id,blob:bl,thumb:await thumb(bl,200)}; if(o.photos[p].ebay){ np.ebay=o.photos[p].ebay; np.name=o.photos[p].name||''; if(o.photos[p].src) np.src=await d2b(o.photos[p].src); } c.photos.push(np); } }
         if(c.front||c.back) c.thumb=await thumb(c.front||c.back);
         for(var sd=0;sd<2;sd++){ var sn=sd?'back':'front', oc=o.clean&&o.clean[sn]; if(oc&&c[sn]){ var cb=await d2b(oc.data); if(cb) c.clean[sn]={blob:cb,notes:oc.notes||[],found:!!oc.found,msg:oc.msg||'',ts:oc.ts||Date.now(),mode:oc.mode||'raw',src:c[sn].size}; } }
         await refreshCThumb(c);
